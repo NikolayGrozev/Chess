@@ -292,7 +292,120 @@ class knight: public chessPiece{
         knight(pieceColor c, bool pinned, pinDirection direction):chessPiece(c, pinned, direction){}
         ~knight(){}
         Position * get_ValidMoves(chessPiece* board[8][8], Position p)const override {
+            Position * validMoves = new Position[1];
 
+            if(this->get_isPinned()){
+                return validMoves;
+            }
+
+            if(this->get_PieceColor() == WHITE){
+                if(
+                    p.get_x()+2 < 8 && p.get_y()+1 < 8 && 
+                    (board[p.get_y()+1][p.get_x()+2] == NULL || board[p.get_y()+1][p.get_x()+2]->get_PieceColor() == BLACK)
+                ){
+                    validMoves = addToArr(p.get_x()+2, p.get_y()+1, validMoves);
+                }
+                if(
+                    p.get_x()+2 < 8 && p.get_y()-1 > -1 &&
+                    (board[p.get_y()-1][p.get_x()+2] == NULL || board[p.get_y()-1][p.get_x()+2]->get_PieceColor() == BLACK)
+                ){
+                    validMoves = addToArr(p.get_x()+2, p.get_y()-1, validMoves);
+                }
+
+                if(
+                    p.get_x()-2 > -1 && p.get_y()+1 < 8 &&
+                    (board[p.get_y()+1][p.get_x()-2] == NULL || board[p.get_y()+1][p.get_x()-2]->get_PieceColor() == BLACK)
+                ){
+                    validMoves = addToArr(p.get_x()-2, p.get_y()+1, validMoves);
+                }
+                if(
+                    p.get_x()-2 > -1 && p.get_y()-1 > -1 &&
+                    (board[p.get_y()-1][p.get_x()-2] == NULL || board[p.get_y()-1][p.get_x()-2]->get_PieceColor() == BLACK)
+                ){
+                    validMoves = addToArr(p.get_x()-2, p.get_y()-1, validMoves);
+                }
+
+                if(
+                    p.get_y()+2 < 8 && p.get_x()+1 < 8 &&
+                    (board[p.get_y()+2][p.get_x()+1] == NULL || board[p.get_y()+2][p.get_x()+1]->get_PieceColor() == BLACK)
+                ){
+                    validMoves = addToArr(p.get_x()+1, p.get_y()+2, validMoves);
+                }
+                if(
+                    p.get_y()+2 < 8 && p.get_x()-1 > -1 &&
+                    (board[p.get_y()+2][p.get_x()-1] == NULL || board[p.get_y()+2][p.get_x()-1]->get_PieceColor() == BLACK)
+                ){
+                    validMoves = addToArr(p.get_x()-1, p.get_y()+2, validMoves);
+                }
+
+                if(
+                    p.get_y()-2 > -1 && p.get_x()+1 < 8 &&
+                    (board[p.get_y()-2][p.get_x()+1] == NULL || board[p.get_y()-2][p.get_x()+1]->get_PieceColor() == BLACK)
+                ){
+                    validMoves = addToArr(p.get_x()+1, p.get_y()-2, validMoves);
+                }
+                if(
+                    p.get_y()-2 > -1 && p.get_x()-1 > -1 &&
+                    (board[p.get_y()-2][p.get_x()-1] == NULL || board[p.get_y()-2][p.get_x()-1]->get_PieceColor() == BLACK)
+                ){
+                    validMoves = addToArr(p.get_x()-1, p.get_y()-2, validMoves);
+                }
+
+            }else if(this->get_PieceColor() == BLACK){
+                if(
+                    p.get_x()+2 < 8 && p.get_y()+1 < 8 && 
+                    (board[p.get_y()+1][p.get_x()+2] == NULL || board[p.get_y()+1][p.get_x()+2]->get_PieceColor() == WHITE)
+                ){
+                    validMoves = addToArr(p.get_x()+2, p.get_y()+1, validMoves);
+                }
+                if(
+                    p.get_x()+2 < 8 && p.get_y()-1 > -1 &&
+                    (board[p.get_y()-1][p.get_x()+2] == NULL || board[p.get_y()-1][p.get_x()+2]->get_PieceColor() == WHITE)
+                ){
+                    validMoves = addToArr(p.get_x()+2, p.get_y()-1, validMoves);
+                }
+
+                if(
+                    p.get_x()-2 > -1 && p.get_y()+1 < 8 &&
+                    (board[p.get_y()+1][p.get_x()-2] == NULL || board[p.get_y()+1][p.get_x()-2]->get_PieceColor() == WHITE)
+                ){
+                    validMoves = addToArr(p.get_x()-2, p.get_y()+1, validMoves);
+                }
+                if(
+                    p.get_x()-2 > -1 && p.get_y()-1 > -1 &&
+                    (board[p.get_y()-1][p.get_x()-2] == NULL || board[p.get_y()-1][p.get_x()-2]->get_PieceColor() == WHITE)
+                ){
+                    validMoves = addToArr(p.get_x()-2, p.get_y()-1, validMoves);
+                }
+
+                if(
+                    p.get_y()+2 < 8 && p.get_x()+1 < 8 &&
+                    (board[p.get_y()+2][p.get_x()+1] == NULL || board[p.get_y()+2][p.get_x()+1]->get_PieceColor() == WHITE)
+                ){
+                    validMoves = addToArr(p.get_x()+1, p.get_y()+2, validMoves);
+                }
+                if(
+                    p.get_y()+2 < 8 && p.get_x()-1 > -1 &&
+                    (board[p.get_y()+2][p.get_x()-1] == NULL || board[p.get_y()+2][p.get_x()-1]->get_PieceColor() == WHITE)
+                ){
+                    validMoves = addToArr(p.get_x()-1, p.get_y()+2, validMoves);
+                }
+
+                if(
+                    p.get_y()-2 > -1 && p.get_x()+1 < 8 &&
+                    (board[p.get_y()-2][p.get_x()+1] == NULL || board[p.get_y()-2][p.get_x()+1]->get_PieceColor() == WHITE)
+                ){
+                    validMoves = addToArr(p.get_x()+1, p.get_y()-2, validMoves);
+                }
+                if(
+                    p.get_y()-2 > -1 && p.get_x()-1 > -1 &&
+                    (board[p.get_y()-2][p.get_x()-1] == NULL || board[p.get_y()-2][p.get_x()-1]->get_PieceColor() == WHITE)
+                ){
+                    validMoves = addToArr(p.get_x()-1, p.get_y()-2, validMoves);
+                }
+            }
+
+            return validMoves;
         }
 };
 
