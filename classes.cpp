@@ -41,8 +41,7 @@ class Position{
         int y;
     public:
         Position():x(INT_MAX), y(INT_MAX) {}
-        Position(int x, int y)
-        {
+        Position(int x, int y){
             if(x < 0 || x > 7 || y < 0 || y > 7){
                 throw invalid_argument("Position coordinates out of bounds");
             }
@@ -416,8 +415,192 @@ class bishop: public chessPiece{
         ~bishop(){}
         Position * get_ValidMoves(chessPiece* board[8][8], Position p)const override {
 
-        }
+            Position * validMoves = new Position[1];
 
+            if(
+                this->get_isPinned() && 
+                (this->get_pinDirection() == pinDirection::top ||
+                this->get_pinDirection() == pinDirection::bottom ||
+                this->get_pinDirection() == pinDirection::left ||
+                this->get_pinDirection() == pinDirection::right)
+            ){
+                return validMoves;
+            }
+
+            if(this->get_PieceColor() == WHITE){
+                if(this->get_isPinned()){
+                    if(this->get_pinDirection() == pinDirection::diagonalLeft || this->get_pinDirection() == pinDirection::diagonalBottomRight){
+                        for(int i = 1; p.get_x() - i >= 0 && p.get_y() - i >= 0; i++){
+                            if(board[p.get_y()-i][p.get_x()-i] != nullptr && board[p.get_y()-i][p.get_x()-i]->get_PieceColor() == WHITE){
+                                break;
+                            }
+                            validMoves = addToArr(p.get_x()-i, p.get_y()-i, validMoves);
+                            if(board[p.get_y()-i][p.get_x()-i] != nullptr && board[p.get_y()-i][p.get_x()-i]->get_PieceColor() == BLACK){
+                                break;
+                            }
+                        }
+
+                        for(int i = 1; p.get_x() + i <= 7 && p.get_y() + i <= 7; i++){
+                            if(board[p.get_y()+i][p.get_x()+i] != nullptr && board[p.get_y()+i][p.get_x()+i]->get_PieceColor() == WHITE){
+                                break;
+                            }
+                            validMoves = addToArr(p.get_x()+i, p.get_y()+i, validMoves);
+                            if(board[p.get_y()+i][p.get_x()+i] != nullptr && board[p.get_y()+i][p.get_x()+i]->get_PieceColor() == BLACK){
+                                break;
+                            }
+                        }
+    
+                    }else if(this->get_pinDirection() == pinDirection::diagonalRight || this->get_pinDirection() == pinDirection::diagonalBottomLeft){
+                        for(int i = 1; p.get_x() + i <= 7 && p.get_y() - i >= 0; i++){
+                            if(board[p.get_y()-i][p.get_x()+i] != nullptr && board[p.get_y()-i][p.get_x()+i]->get_PieceColor() == WHITE){
+                                break;
+                            }
+                            validMoves = addToArr(p.get_x()+i, p.get_y()-i, validMoves);
+                            if(board[p.get_y()-i][p.get_x()+i] != nullptr && board[p.get_y()-i][p.get_x()+i]->get_PieceColor() == BLACK){
+                                break;
+                            }
+                        }
+                        for(int i = 1; p.get_x() - i >= 0 && p.get_y() + i <= 7; i++){
+                            if(board[p.get_y()+i][p.get_x()-i] != nullptr && board[p.get_y()+i][p.get_x()-i]->get_PieceColor() == WHITE){
+                                break;
+                            }
+                            validMoves = addToArr(p.get_x()-i, p.get_y()+i, validMoves);
+                            if(board[p.get_y()+i][p.get_x()-i] != nullptr && board[p.get_y()+i][p.get_x()-i]->get_PieceColor() == BLACK){
+                                break;
+                            }
+                        }
+                    }
+                    return validMoves;
+                }
+                for(int i = 1; p.get_x()-i >= 0 && p.get_y()-i >= 0; i++){
+                    if(board[p.get_y()-i][p.get_x()-i] != nullptr && board[p.get_y()-i][p.get_x()-i]->get_PieceColor() == WHITE){
+                        break;
+                    }
+                    validMoves = addToArr(p.get_x()-i, p.get_y()-i, validMoves);
+                    if(board[p.get_y()-i][p.get_x()-i] != nullptr && board[p.get_y()-i][p.get_x()-i]->get_PieceColor() == BLACK){
+                        break;
+                    }
+                }
+
+                for(int i = 1; p.get_x()-i >= 0 && p.get_y()+i <= 7; i++){
+                    if(board[p.get_y()+i][p.get_x()-i] != nullptr && board[p.get_y()+i][p.get_x()-i]->get_PieceColor() == WHITE){
+                        break;
+                    }
+                    validMoves = addToArr(p.get_x()-i, p.get_y()+i, validMoves);
+                    if(board[p.get_y()+i][p.get_x()-i] != nullptr && board[p.get_y()+i][p.get_x()-i]->get_PieceColor() == BLACK){
+                        break;
+                    }
+                }
+
+                for(int i = 1; p.get_x()+i <= 7 && p.get_y()-i >= 0; i++){
+                    if(board[p.get_y()-i][p.get_x()+i] != nullptr && board[p.get_y()-i][p.get_x()+i]->get_PieceColor() == WHITE){
+                        break;
+                    }
+                    validMoves = addToArr(p.get_x()+i, p.get_y()-i, validMoves);
+                    if(board[p.get_y()-i][p.get_x()+i] != nullptr && board[p.get_y()-i][p.get_x()+i]->get_PieceColor() == BLACK){
+                        break;
+                    }
+                }
+
+                for(int i = 1; p.get_x()+i <= 7 && p.get_y()+i <= 7; i++){
+                    if(board[p.get_y()+i][p.get_x()+i] != nullptr && board[p.get_y()+i][p.get_x()+i]->get_PieceColor() == WHITE){
+                        break;
+                    }
+                    validMoves = addToArr(p.get_x()+i, p.get_y()+i, validMoves);
+                    if(board[p.get_y()+i][p.get_x()+i] != nullptr && board[p.get_y()+i][p.get_x()+i]->get_PieceColor() == BLACK){
+                        break;
+                    }
+                }
+
+            }else if(this->get_PieceColor() == BLACK){
+                    if(this->get_isPinned()){
+                        if(this->get_pinDirection() == pinDirection::diagonalRight || this->get_pinDirection() == pinDirection::diagonalBottomLeft){
+                            for(int i = 1; p.get_x() - i >= 0 && p.get_y() - i >= 0; i++){
+                                if(board[p.get_y()-i][p.get_x()-i] != nullptr && board[p.get_y()-i][p.get_x()-i]->get_PieceColor() == BLACK){
+                                    break;
+                                }
+                                validMoves = addToArr(p.get_x()-i, p.get_y()-i, validMoves);
+                                if(board[p.get_y()-i][p.get_x()-i] != nullptr && board[p.get_y()-i][p.get_x()-i]->get_PieceColor() == WHITE){
+                                    break;
+                                }
+                            }
+
+                            for(int i = 1; p.get_x() + i <= 7 && p.get_y() + i <= 7; i++){
+                                if(board[p.get_y()+i][p.get_x()+i] != nullptr && board[p.get_y()+i][p.get_x()+i]->get_PieceColor() == BLACK){
+                                    break;
+                                }
+                                validMoves = addToArr(p.get_x()+i, p.get_y()+i, validMoves);
+                                if(board[p.get_y()+i][p.get_x()+i] != nullptr && board[p.get_y()+i][p.get_x()+i]->get_PieceColor() == WHITE){
+                                    break;
+                                }
+                            }
+        
+                        }else if(this->get_pinDirection() == pinDirection::diagonalLeft || this->get_pinDirection() == pinDirection::diagonalBottomRight){
+                            for(int i = 1; p.get_x() + i <= 7 && p.get_y() - i >= 0; i++){
+                                if(board[p.get_y()-i][p.get_x()+i] != nullptr && board[p.get_y()-i][p.get_x()+i]->get_PieceColor() == BLACK){
+                                    break;
+                                }
+                                validMoves = addToArr(p.get_x()+i, p.get_y()-i, validMoves);
+                                if(board[p.get_y()-i][p.get_x()+i] != nullptr && board[p.get_y()-i][p.get_x()+i]->get_PieceColor() == WHITE){
+                                    break;
+                                }
+                            }
+                            for(int i = 1; p.get_x() - i >= 0 && p.get_y() + i <= 7; i++){
+                                if(board[p.get_y()+i][p.get_x()-i] != nullptr && board[p.get_y()+i][p.get_x()-i]->get_PieceColor() == BLACK){
+                                    break;
+                                }
+                                validMoves = addToArr(p.get_x()-i, p.get_y()+i, validMoves);
+                                if(board[p.get_y()+i][p.get_x()-i] != nullptr && board[p.get_y()+i][p.get_x()-i]->get_PieceColor() == WHITE){
+                                    break;
+                                }
+                            }
+                        }
+                        return validMoves;
+                    }
+
+                    for(int i = 1; p.get_x()-i >= 0 && p.get_y()-i >= 0; i++){
+                        if(board[p.get_y()-i][p.get_x()-i] != nullptr && board[p.get_y()-i][p.get_x()-i]->get_PieceColor() == BLACK){
+                            break;
+                        }
+                        validMoves = addToArr(p.get_x()-i, p.get_y()-i, validMoves);
+                        if(board[p.get_y()-i][p.get_x()-i] != nullptr && board[p.get_y()-i][p.get_x()-i]->get_PieceColor() == WHITE){
+                            break;
+                        }
+                    }
+
+                    for(int i = 1; p.get_x()-i >= 0 && p.get_y()+i <= 7; i++){
+                        if(board[p.get_y()+i][p.get_x()-i] != nullptr && board[p.get_y()+i][p.get_x()-i]->get_PieceColor() == BLACK){
+                            break;
+                        }
+                        validMoves = addToArr(p.get_x()-i, p.get_y()+i, validMoves);
+                        if(board[p.get_y()+i][p.get_x()-i] != nullptr && board[p.get_y()+i][p.get_x()-i]->get_PieceColor() == WHITE){
+                            break;
+                        }
+                    }
+
+                    for(int i = 1; p.get_x()+i <= 7 && p.get_y()-i >= 0; i++){
+                        if(board[p.get_y()-i][p.get_x()+i] != nullptr && board[p.get_y()-i][p.get_x()+i]->get_PieceColor() == BLACK){
+                            break;
+                        }
+                        validMoves = addToArr(p.get_x()+i, p.get_y()-i, validMoves);
+                        if(board[p.get_y()-i][p.get_x()+i] != nullptr && board[p.get_y()-i][p.get_x()+i]->get_PieceColor() == WHITE){
+                            break;
+                        }
+                    }
+
+                    for(int i = 1; p.get_x()+i <= 7 && p.get_y()+i <= 7; i++){
+                        if(board[p.get_y()+i][p.get_x()+i] != nullptr && board[p.get_y()+i][p.get_x()+i]->get_PieceColor() == BLACK){
+                            break;
+                        }
+                        validMoves = addToArr(p.get_x()+i, p.get_y()+i, validMoves);
+                        if(board[p.get_y()+i][p.get_x()+i] != nullptr && board[p.get_y()+i][p.get_x()+i]->get_PieceColor() == WHITE){
+                            break;
+                        }
+                    }
+                }
+
+                return validMoves;
+            }
 };
 
 class rook: public chessPiece{
