@@ -83,7 +83,7 @@ class chessPiece{
     public:
         chessPiece(pieceColor c, bool pinned, pinDirection direction): color(c), isPinnedToKing(pinned), d(direction){};
         virtual ~chessPiece(){};
-        virtual Position * get_ValidMoves(chessPiece* board[8][8], Position p)const = 0;
+        virtual Position * get_ValidMoves(const chessPiece* board[8][8], const Position p)const = 0;
         virtual void set_hasMoved(bool hm){};
         pieceColor get_PieceColor()const{
             return this->color;
@@ -131,7 +131,7 @@ class pawn: public chessPiece{
     public:
         pawn(pieceColor c, bool pinned, pinDirection direction):chessPiece(c, pinned, direction), hasMoved(0){}
         ~pawn(){}
-        Position * get_ValidMoves(chessPiece* board[8][8], Position p)const override {
+        Position * get_ValidMoves(const chessPiece* board[8][8], const Position p)const override {
             //context: when calculating, we assume white is at the bottom of the board, and black is at the top,
             //reversing the numbers depending on piece color (right for white is left for black if we have 2 pieces facing each other)
             //all pinDirections, stored in a piece are from the piece's perspective, assuming you start with a king's pawn, the king is 
@@ -144,136 +144,60 @@ class pawn: public chessPiece{
             const int y = p.get_y();
             const int x = p.get_x();
 
-            if(this->get_PieceColor() == WHITE){
-                //starting pawns are on 6, they path to 0
-                if(this->get_isPinned()){
-                    if(
-                        this->get_pinDirection() == pinDirection::left ||
-                        this->get_pinDirection() == pinDirection::right ||
-                        this->get_pinDirection() == pinDirection::diagonalBottomLeft ||
-                        this->get_pinDirection() == pinDirection::diagonalBottomRight
-                    ){
-                        return validMoves;
-                    }
+            int forward_offset = (this->get_PieceColor() == WHITE) ? -1 : 1;
+            int startRow = (this->get_PieceColor() == WHITE) ? 6 : 1;
 
-                    if(
-                        this->get_pinDirection() == pinDirection::diagonalLeft &&
-                        board[y-1][x-1] != nullptr &&
-                        board[y-1][x-1]->get_PieceColor() == BLACK
-                    ){
-                        validMoves = addToArr(x-1, y-1, validMoves);
-                        return validMoves;
-                    }
+            int right_offset = (this->get_PieceColor() == WHITE) ? 1 : -1;
+            int left_offset = -1 * right_offset;
+            pieceColor enemyColor = (this->get_PieceColor() == WHITE) ? BLACK : WHITE;
 
-                    if(
-                        this->get_pinDirection() == pinDirection::diagonalRight &&
-                        board[y-1][x+1] != nullptr &&
-                        board[y-1][x+1]->get_PieceColor() == BLACK
-                    ){
-                        validMoves = addToArr(x+1, y-1, validMoves);
-                        return validMoves;
-                    }
-                }
 
-                if(board[y-1][x] == nullptr){
-                    validMoves = addToArr(x, y-1, validMoves);
-                }
+            bool canMoveForward = (
+                this->get_pinDirection() == pinDirection::top ||
+                this->get_pinDirection() == pinDirection::bottom ||
+                this->get_pinDirection() == pinDirection::NONE
+            ) ? true : false;
 
-                if(
-                    y == 6 &&
-                    !this->get_hasMoved() &&
-                    board[5][x] == nullptr &&
-                    board[4][x] == nullptr
-                ){
-                    validMoves = addToArr(x, 4, validMoves);
-                }
+            bool canAttackLeft = (
+                this->get_pinDirection() == pinDirection::diagonalLeft ||
+                this->get_pinDirection() == pinDirection::diagonalBottomRight ||
+                this->get_pinDirection() == pinDirection::NONE
+            ) ? true : false; 
 
-                if(
-                    x > 0 &&
-                    board[y-1][x-1] != nullptr &&
-                    board[y-1][x-1]->get_PieceColor() == BLACK &&
-                    this->get_pinDirection() == NONE
-                ){
-                    //this->get_pinDirection() == NONE is needed here, because top and bottom are the only directions not checked
-                    validMoves = addToArr(x-1, y-1, validMoves);
-                }
+            bool canAttackRight = (
+                this->get_pinDirection() == pinDirection::diagonalRight ||
+                this->get_pinDirection() == pinDirection::diagonalBottomLeft ||
+                this->get_pinDirection() == pinDirection::NONE
+            ) ? true : false; 
 
-                if(
-                    x < 7 &&
-                    board[y-1][x+1] != nullptr &&
-                    board[y-1][x+1]->get_PieceColor() == BLACK &&
-                    this->get_pinDirection() == NONE
-                ){
-                    //this->get_pinDirection() == NONE is needed here, because top and bottom are the only directions not checked
-                    //moving sideways is not allowed when pinned on a line of X
-                    validMoves = addToArr(x+1, y-1, validMoves);
-                }
-                
 
-            }else if(this->get_PieceColor() == BLACK){
-                //starting pawns are on 1, they path to 7
+            if(canMoveForward && (y+forward_offset <= 7 && y+forward_offset >= 0)){
+                if(board[y+forward_offset][x] == nullptr){
+                    validMoves = addToArr(x, y+forward_offset, validMoves);
 
-                if(this->get_isPinned()){
-                    if(
-                        this->get_pinDirection() == pinDirection::left ||
-                        this->get_pinDirection() == pinDirection::right ||
-                        this->get_pinDirection() == pinDirection::diagonalBottomLeft ||
-                        this->get_pinDirection() == pinDirection::diagonalBottomRight
-                    ){
-                        return validMoves;
-                    }
-
-                    if(
-                        this->get_pinDirection() == pinDirection::diagonalLeft &&
-                        board[y+1][x+1] != nullptr &&
-                        board[y+1][x+1]->get_PieceColor() == WHITE
-                    ){
-                        validMoves = addToArr(x+1, y+1, validMoves);
-                        return validMoves;
-                    }
-
-                    if(
-                        this->get_pinDirection() == pinDirection::diagonalRight &&
-                        board[y+1][x-1] != nullptr &&
-                        board[y+1][x-1]->get_PieceColor() == WHITE
-                    ){
-                        validMoves = addToArr(x-1, y+1, validMoves);
-                        return validMoves;
+                    if(y == startRow && board[y+(2*forward_offset)][x] == nullptr){
+                        validMoves = addToArr(x, y+(2*forward_offset), validMoves);
                     }
                 }
+            }
 
-                if(board[y+1][x] == nullptr){
-                    validMoves = addToArr(x, y+1, validMoves);
-                }
-
+            if(canAttackLeft && (y+forward_offset <= 7 && y+forward_offset >= 0)){
                 if(
-                    y == 1 &&
-                    !this->get_hasMoved() &&
-                    board[2][x] == nullptr &&
-                    board[3][x] == nullptr
+                    (x+left_offset <= 7 && x+left_offset >= 0) &&
+                    board[y+forward_offset][x+left_offset] != nullptr &&
+                    board[y+forward_offset][x+left_offset]->get_PieceColor() == enemyColor
                 ){
-                    validMoves = addToArr(x, 3, validMoves);
+                    validMoves = addToArr(x+left_offset, y+forward_offset, validMoves);
                 }
+            }
 
+            if(canAttackRight && (y+forward_offset <= 7 && y+forward_offset >= 0)){
                 if(
-                    x > 0 &&
-                    board[y+1][x-1] != nullptr &&
-                    board[y+1][x-1]->get_PieceColor() == WHITE &&
-                    this->get_pinDirection() == NONE
+                    (x+right_offset <= 7 && x+right_offset >= 0) &&
+                    board[y+forward_offset][x+right_offset] != nullptr &&
+                    board[y+forward_offset][x+right_offset]->get_PieceColor() == enemyColor
                 ){
-                    //this->get_pinDirection() == NONE is needed here, because top and bottom are the only directions not checked
-                    validMoves = addToArr(x-1, y+1, validMoves);
-                }
-
-                if(
-                    x < 7 &&
-                    board[y+1][x+1] != nullptr &&
-                    board[y+1][x+1]->get_PieceColor() == WHITE &&
-                    this->get_pinDirection() == NONE
-                ){
-                    //this->get_pinDirection() == NONE is needed here, because top and bottom are the only directions not checked
-                    //moving sideways is not allowed when pinned on a line of X
-                    validMoves = addToArr(x+1, y+1, validMoves);
+                    validMoves = addToArr(x+right_offset, y+forward_offset, validMoves);
                 }
             }
 
@@ -293,7 +217,7 @@ class knight: public chessPiece{
     public:
         knight(pieceColor c, bool pinned, pinDirection direction):chessPiece(c, pinned, direction){}
         ~knight(){}
-        Position * get_ValidMoves(chessPiece* board[8][8], Position p)const override {
+        Position * get_ValidMoves(const chessPiece* board[8][8], const Position p)const override {
             Position * validMoves = new Position[1];
 
             if(this->get_isPinned()){
@@ -302,112 +226,18 @@ class knight: public chessPiece{
 
             const int y = p.get_y();
             const int x = p.get_x();
+
+            int xArr[8] = {2, 2, -2, -2, 1, -1, 1, -1};
+            int yArr[8] = {1, -1, 1, -1, 2, 2, -2, -2};
             
-            if(this->get_PieceColor() == WHITE){
+            for(int i = 0; i < 8; i++){
                 if(
-                    x+2 < 8 && y+1 < 8 && 
-                    (board[y+1][x+2] == NULL || board[y+1][x+2]->get_PieceColor() == BLACK)
+                    ((x + xArr[i] < 0 || x + xArr[i] > 7) || (y + yArr[i] < 0 || y + yArr[i] > 7)) ||
+                    (board[y + yArr[i]][x + xArr[i]] != nullptr && board[y + yArr[i]][x + xArr[i]]->get_PieceColor() == this->get_PieceColor())
                 ){
-                    validMoves = addToArr(x+2, y+1, validMoves);
+                    continue;
                 }
-                if(
-                    x+2 < 8 && y-1 > -1 &&
-                    (board[y-1][x+2] == NULL || board[y-1][x+2]->get_PieceColor() == BLACK)
-                ){
-                    validMoves = addToArr(x+2, y-1, validMoves);
-                }
-
-                if(
-                    x-2 > -1 && y+1 < 8 &&
-                    (board[y+1][x-2] == NULL || board[y+1][x-2]->get_PieceColor() == BLACK)
-                ){
-                    validMoves = addToArr(x-2, y+1, validMoves);
-                }
-                if(
-                    x-2 > -1 && y-1 > -1 &&
-                    (board[y-1][x-2] == NULL || board[y-1][x-2]->get_PieceColor() == BLACK)
-                ){
-                    validMoves = addToArr(x-2, y-1, validMoves);
-                }
-
-                if(
-                    y+2 < 8 && x+1 < 8 &&
-                    (board[y+2][x+1] == NULL || board[y+2][x+1]->get_PieceColor() == BLACK)
-                ){
-                    validMoves = addToArr(x+1, y+2, validMoves);
-                }
-                if(
-                    y+2 < 8 && x-1 > -1 &&
-                    (board[y+2][x-1] == NULL || board[y+2][x-1]->get_PieceColor() == BLACK)
-                ){
-                    validMoves = addToArr(x-1, y+2, validMoves);
-                }
-
-                if(
-                    y-2 > -1 && x+1 < 8 &&
-                    (board[y-2][x+1] == NULL || board[y-2][x+1]->get_PieceColor() == BLACK)
-                ){
-                    validMoves = addToArr(x+1, y-2, validMoves);
-                }
-                if(
-                    y-2 > -1 && x-1 > -1 &&
-                    (board[y-2][x-1] == NULL || board[y-2][x-1]->get_PieceColor() == BLACK)
-                ){
-                    validMoves = addToArr(x-1, y-2, validMoves);
-                }
-
-            }else if(this->get_PieceColor() == BLACK){
-                if(
-                    x+2 < 8 && y+1 < 8 && 
-                    (board[y+1][x+2] == NULL || board[y+1][x+2]->get_PieceColor() == WHITE)
-                ){
-                    validMoves = addToArr(x+2, y+1, validMoves);
-                }
-                if(
-                    x+2 < 8 && y-1 > -1 &&
-                    (board[y-1][x+2] == NULL || board[y-1][x+2]->get_PieceColor() == WHITE)
-                ){
-                    validMoves = addToArr(x+2, y-1, validMoves);
-                }
-
-                if(
-                    x-2 > -1 && y+1 < 8 &&
-                    (board[y+1][x-2] == NULL || board[y+1][x-2]->get_PieceColor() == WHITE)
-                ){
-                    validMoves = addToArr(x-2, y+1, validMoves);
-                }
-                if(
-                    x-2 > -1 && y-1 > -1 &&
-                    (board[y-1][x-2] == NULL || board[y-1][x-2]->get_PieceColor() == WHITE)
-                ){
-                    validMoves = addToArr(x-2, y-1, validMoves);
-                }
-
-                if(
-                    y+2 < 8 && x+1 < 8 &&
-                    (board[y+2][x+1] == NULL || board[y+2][x+1]->get_PieceColor() == WHITE)
-                ){
-                    validMoves = addToArr(x+1, y+2, validMoves);
-                }
-                if(
-                    y+2 < 8 && x-1 > -1 &&
-                    (board[y+2][x-1] == NULL || board[y+2][x-1]->get_PieceColor() == WHITE)
-                ){
-                    validMoves = addToArr(x-1, y+2, validMoves);
-                }
-
-                if(
-                    y-2 > -1 && x+1 < 8 &&
-                    (board[y-2][x+1] == NULL || board[y-2][x+1]->get_PieceColor() == WHITE)
-                ){
-                    validMoves = addToArr(x+1, y-2, validMoves);
-                }
-                if(
-                    y-2 > -1 && x-1 > -1 &&
-                    (board[y-2][x-1] == NULL || board[y-2][x-1]->get_PieceColor() == WHITE)
-                ){
-                    validMoves = addToArr(x-1, y-2, validMoves);
-                }
+                validMoves = addToArr(x + xArr[i], y + yArr[i], validMoves);
             }
 
             return validMoves;
@@ -416,214 +246,126 @@ class knight: public chessPiece{
 
 class bishop: public chessPiece{
     private:
+        void getDiagonalMoves(const chessPiece* board[8][8], const Position p, const int x_offset, const int y_offset, Position *& moves) const {
+            const int x = p.get_x();
+            const int y = p.get_y();
+
+            // Loop starting from 1, multiplying by the offset
+            for(int i = 1; ; i++) {
+                int targetX = x + (i * x_offset);
+                int targetY = y + (i * y_offset);
+
+                // 1. Boundary check FIRST
+                if(targetX < 0 || targetX > 7 || targetY < 0 || targetY > 7) {
+                    break;
+                }
+
+                // 2. Collision check
+                if(board[targetY][targetX] != nullptr) {
+                    if(board[targetY][targetX]->get_PieceColor() == this->get_PieceColor()) {
+                        break; // Blocked by a friendly piece
+                    } else {
+                        moves = addToArr(targetX, targetY, moves); // Capture enemy
+                        break; // Sliding pieces must stop after a capture
+                    }
+                }
+
+                // 3. Empty square, add and continue sliding
+                moves = addToArr(targetX, targetY, moves);
+            }
+        }
     public:
         bishop(pieceColor c, bool pinned, pinDirection direction):chessPiece(c, pinned, direction){}
         ~bishop(){}
-        Position * get_ValidMoves(chessPiece* board[8][8], Position p)const override {
+        Position * get_ValidMoves(const chessPiece* board[8][8], const Position p)const override {
 
             Position * validMoves = new Position[1];
 
             const int x = p.get_x();
             const int y = p.get_y();
 
+            const int leftDiagonal_x_offset = (this->get_PieceColor() == WHITE) ? -1 : 1;
+            const int rightDiagonal_x_offset = (this->get_PieceColor() == WHITE) ? 1 : -1 ;
+            const int diagonal_y_offset = (this->get_PieceColor() == WHITE) ? -1 : 1;
+            const int bottomDiagonal_y_offset = (this->get_PieceColor() == WHITE) ? 1 : -1 ;
+
             if(
-                this->get_isPinned() && 
-                (this->get_pinDirection() == pinDirection::top ||
+                this->get_pinDirection() == pinDirection::top ||
                 this->get_pinDirection() == pinDirection::bottom ||
                 this->get_pinDirection() == pinDirection::left ||
-                this->get_pinDirection() == pinDirection::right)
+                this->get_pinDirection() == pinDirection::right
             ){
                 return validMoves;
             }
 
-            if(this->get_PieceColor() == WHITE){
-                if(this->get_isPinned()){
-                    if(this->get_pinDirection() == pinDirection::diagonalLeft || this->get_pinDirection() == pinDirection::diagonalBottomRight){
-                        for(int i = 1; x - i >= 0 && y - i >= 0; i++){
-                            if(board[y-i][x-i] != nullptr && board[y-i][x-i]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                            validMoves = addToArr(x-i, y-i, validMoves);
-                            if(board[y-i][x-i] != nullptr && board[y-i][x-i]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                        }
+            bool canMoveDiagLeft = (
+                this->get_pinDirection() == pinDirection::NONE ||
+                this->get_pinDirection() == pinDirection::diagonalLeft ||
+                this->get_pinDirection() == pinDirection::diagonalBottomRight
+            ) ? true : false;
+            bool canMoveDiagRight = (
+                this->get_pinDirection() == pinDirection::NONE ||
+                this->get_pinDirection() == pinDirection::diagonalRight ||
+                this->get_pinDirection() == pinDirection::diagonalBottomLeft
+            ) ? true : false;
 
-                        for(int i = 1; x + i <= 7 && y + i <= 7; i++){
-                            if(board[y+i][x+i] != nullptr && board[y+i][x+i]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                            validMoves = addToArr(x+i, y+i, validMoves);
-                            if(board[y+i][x+i] != nullptr && board[y+i][x+i]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                        }
-    
-                    }else if(this->get_pinDirection() == pinDirection::diagonalRight || this->get_pinDirection() == pinDirection::diagonalBottomLeft){
-                        for(int i = 1; x + i <= 7 && y - i >= 0; i++){
-                            if(board[y-i][x+i] != nullptr && board[y-i][x+i]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                            validMoves = addToArr(x+i, y-i, validMoves);
-                            if(board[y-i][x+i] != nullptr && board[y-i][x+i]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                        }
-                        for(int i = 1; x - i >= 0 && y + i <= 7; i++){
-                            if(board[y+i][x-i] != nullptr && board[y+i][x-i]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                            validMoves = addToArr(x-i, y+i, validMoves);
-                            if(board[y+i][x-i] != nullptr && board[y+i][x-i]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                        }
-                    }
-                    return validMoves;
-                }
-                for(int i = 1; x-i >= 0 && y-i >= 0; i++){
-                    if(board[y-i][x-i] != nullptr && board[y-i][x-i]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                    validMoves = addToArr(x-i, y-i, validMoves);
-                    if(board[y-i][x-i] != nullptr && board[y-i][x-i]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                }
+            if(canMoveDiagLeft) {
+                getDiagonalMoves(board, p, leftDiagonal_x_offset, diagonal_y_offset, validMoves); // diagonalLeft
+                getDiagonalMoves(board, p,  rightDiagonal_x_offset,  bottomDiagonal_y_offset, validMoves); // diagonalBottomRight
+            }
 
-                for(int i = 1; x-i >= 0 && y+i <= 7; i++){
-                    if(board[y+i][x-i] != nullptr && board[y+i][x-i]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                    validMoves = addToArr(x-i, y+i, validMoves);
-                    if(board[y+i][x-i] != nullptr && board[y+i][x-i]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                }
-
-                for(int i = 1; x+i <= 7 && y-i >= 0; i++){
-                    if(board[y-i][x+i] != nullptr && board[y-i][x+i]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                    validMoves = addToArr(x+i, y-i, validMoves);
-                    if(board[y-i][x+i] != nullptr && board[y-i][x+i]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                }
-
-                for(int i = 1; x+i <= 7 && y+i <= 7; i++){
-                    if(board[y+i][x+i] != nullptr && board[y+i][x+i]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                    validMoves = addToArr(x+i, y+i, validMoves);
-                    if(board[y+i][x+i] != nullptr && board[y+i][x+i]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                }
-
-            }else if(this->get_PieceColor() == BLACK){
-                    if(this->get_isPinned()){
-                        if(this->get_pinDirection() == pinDirection::diagonalRight || this->get_pinDirection() == pinDirection::diagonalBottomLeft){
-                            for(int i = 1; x - i >= 0 && y - i >= 0; i++){
-                                if(board[y-i][x-i] != nullptr && board[y-i][x-i]->get_PieceColor() == BLACK){
-                                    break;
-                                }
-                                validMoves = addToArr(x-i, y-i, validMoves);
-                                if(board[y-i][x-i] != nullptr && board[y-i][x-i]->get_PieceColor() == WHITE){
-                                    break;
-                                }
-                            }
-
-                            for(int i = 1; x + i <= 7 && y + i <= 7; i++){
-                                if(board[y+i][x+i] != nullptr && board[y+i][x+i]->get_PieceColor() == BLACK){
-                                    break;
-                                }
-                                validMoves = addToArr(x+i, y+i, validMoves);
-                                if(board[y+i][x+i] != nullptr && board[y+i][x+i]->get_PieceColor() == WHITE){
-                                    break;
-                                }
-                            }
-        
-                        }else if(this->get_pinDirection() == pinDirection::diagonalLeft || this->get_pinDirection() == pinDirection::diagonalBottomRight){
-                            for(int i = 1; x + i <= 7 && y - i >= 0; i++){
-                                if(board[y-i][x+i] != nullptr && board[y-i][x+i]->get_PieceColor() == BLACK){
-                                    break;
-                                }
-                                validMoves = addToArr(x+i, y-i, validMoves);
-                                if(board[y-i][x+i] != nullptr && board[y-i][x+i]->get_PieceColor() == WHITE){
-                                    break;
-                                }
-                            }
-                            for(int i = 1; x - i >= 0 && y + i <= 7; i++){
-                                if(board[y+i][x-i] != nullptr && board[y+i][x-i]->get_PieceColor() == BLACK){
-                                    break;
-                                }
-                                validMoves = addToArr(x-i, y+i, validMoves);
-                                if(board[y+i][x-i] != nullptr && board[y+i][x-i]->get_PieceColor() == WHITE){
-                                    break;
-                                }
-                            }
-                        }
-                        return validMoves;
-                    }
-
-                    for(int i = 1; x-i >= 0 && y-i >= 0; i++){
-                        if(board[y-i][x-i] != nullptr && board[y-i][x-i]->get_PieceColor() == BLACK){
-                            break;
-                        }
-                        validMoves = addToArr(x-i, y-i, validMoves);
-                        if(board[y-i][x-i] != nullptr && board[y-i][x-i]->get_PieceColor() == WHITE){
-                            break;
-                        }
-                    }
-
-                    for(int i = 1; x-i >= 0 && y+i <= 7; i++){
-                        if(board[y+i][x-i] != nullptr && board[y+i][x-i]->get_PieceColor() == BLACK){
-                            break;
-                        }
-                        validMoves = addToArr(x-i, y+i, validMoves);
-                        if(board[y+i][x-i] != nullptr && board[y+i][x-i]->get_PieceColor() == WHITE){
-                            break;
-                        }
-                    }
-
-                    for(int i = 1; x+i <= 7 && y-i >= 0; i++){
-                        if(board[y-i][x+i] != nullptr && board[y-i][x+i]->get_PieceColor() == BLACK){
-                            break;
-                        }
-                        validMoves = addToArr(x+i, y-i, validMoves);
-                        if(board[y-i][x+i] != nullptr && board[y-i][x+i]->get_PieceColor() == WHITE){
-                            break;
-                        }
-                    }
-
-                    for(int i = 1; x+i <= 7 && y+i <= 7; i++){
-                        if(board[y+i][x+i] != nullptr && board[y+i][x+i]->get_PieceColor() == BLACK){
-                            break;
-                        }
-                        validMoves = addToArr(x+i, y+i, validMoves);
-                        if(board[y+i][x+i] != nullptr && board[y+i][x+i]->get_PieceColor() == WHITE){
-                            break;
-                        }
-                    }
-                }
+            if(canMoveDiagRight) {
+                getDiagonalMoves(board, p,  rightDiagonal_x_offset, diagonal_y_offset, validMoves); // diagonalRight
+                getDiagonalMoves(board, p, leftDiagonal_x_offset,  bottomDiagonal_y_offset, validMoves); // diagonalBottomLeft
+            }
 
                 return validMoves;
-            }
+        }
 };
 
 class rook: public chessPiece{
     private:
         bool hasMoved;
+    void getLaneMoves(const chessPiece* board[8][8], const Position p, const int x_offset, const int y_offset, Position *& moves) const {
+            const int x = p.get_x();
+            const int y = p.get_y();
+            pieceColor myColor = this->get_PieceColor();
+
+            for(int i = 1; ; i++) {
+                int targetX = x + (i * x_offset);
+                int targetY = y + (i * y_offset);
+
+                if(targetX < 0 || targetX > 7 || targetY < 0 || targetY > 7) {
+                    break;
+                }
+
+                if(board[targetY][targetX] != nullptr) {
+                    if(board[targetY][targetX]->get_PieceColor() == myColor) {
+                        break; 
+                    } else {
+                        moves = addToArr(targetX, targetY, moves); 
+                        break; 
+                    }
+                }
+
+                moves = addToArr(targetX, targetY, moves);
+            }
+        }
     public:
         rook(pieceColor c, bool pinned, pinDirection direction):chessPiece(c, pinned, direction), hasMoved(0){}
         ~rook(){}
-        Position * get_ValidMoves(chessPiece* board[8][8], Position p)const override {
+        Position * get_ValidMoves(const chessPiece* board[8][8], const Position p)const override {
 
             Position * validMoves = new Position[1];
 
             const int x = p.get_x();
             const int y = p.get_y();
+
+            const int right_x_offset = (this->get_PieceColor() == WHITE) ? 1:-1;
+            const int left_x_offset = (this->get_PieceColor() == WHITE) ? -1:1;
+            const int top_y_offset = (this->get_PieceColor() == WHITE) ? -1:1;
+            const int bottom_y_offset = (this->get_PieceColor() == WHITE) ? 1:-1;
+
 
             if(this->get_isPinned() && (
                 this->get_pinDirection() == pinDirection::diagonalLeft ||
@@ -634,164 +376,25 @@ class rook: public chessPiece{
                 return validMoves;
             }
 
-            if(this->get_PieceColor() == WHITE){
-                if(this->get_isPinned()){
-                    if(this->get_pinDirection() == pinDirection::left || this->get_pinDirection() == pinDirection::right){
-                        for(int i = 1; x-i >= 0; i++){
-                            if(board[y][x-i] != nullptr && board[y][x-i]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                            validMoves = addToArr(x-i, y, validMoves);
-                            if(board[y][x-i] != nullptr && board[y][x-i]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                        }
-                        for(int i = 1; x+i <=7; i++){
-                            if(board[y][x+i] != nullptr && board[y][x+i]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                            validMoves = addToArr(x+i, y, validMoves);
-                            if(board[y][x+i] != nullptr && board[y][x+i]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                        }
-                    }else if(this->get_pinDirection() == pinDirection::top || this->get_pinDirection() == pinDirection::bottom){
-                        for(int i = 1; y-i >= 0; i++){
-                            if(board[y-i][x] != nullptr && board[y-i][x]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                            validMoves = addToArr(x, y-i, validMoves);
-                            if(board[y-i][x] != nullptr && board[y-i][x]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                        }
-                        for(int i = 1; y+i <=7; i++){
-                            if(board[y+i][x] != nullptr && board[y+i][x]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                            validMoves = addToArr(x, y+i, validMoves);
-                            if(board[y+i][x] != nullptr && board[y+i][x]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                        }
-                    }
-                    return validMoves;
-                }
-                for(int i = 1; x-i >= 0; i++){
-                    if(board[y][x-i] != nullptr && board[y][x-i]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                    validMoves = addToArr(x-i, y, validMoves);
-                    if(board[y][x-i] != nullptr && board[y][x-i]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                }
-                for(int i = 1; x+i <=7; i++){
-                    if(board[y][x+i] != nullptr && board[y][x+i]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                    validMoves = addToArr(x+i, y, validMoves);
-                    if(board[y][x+i] != nullptr && board[y][x+i]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                }
-                for(int i = 1; y-i >= 0; i++){
-                    if(board[y-i][x] != nullptr && board[y-i][x]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                    validMoves = addToArr(x, y-i, validMoves);
-                    if(board[y-i][x] != nullptr && board[y-i][x]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                }
-                for(int i = 1; y+i <=7; i++){
-                    if(board[y+i][x] != nullptr && board[y+i][x]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                    validMoves = addToArr(x, y+i, validMoves);
-                    if(board[y+i][x] != nullptr && board[y+i][x]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                }
-            }else if(this->get_PieceColor() == BLACK){
-                if(this->get_isPinned()){
-                    if(this->get_pinDirection() == pinDirection::left || this->get_pinDirection() == pinDirection::right){
-                        for(int i = 1; x-i >= 0; i++){
-                            if(board[y][x-i] != nullptr && board[y][x-i]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                            validMoves = addToArr(x-i, y, validMoves);
-                            if(board[y][x-i] != nullptr && board[y][x-i]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                        }
-                        for(int i = 1; x+i <=7; i++){
-                            if(board[y][x+i] != nullptr && board[y][x+i]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                            validMoves = addToArr(x+i, y, validMoves);
-                            if(board[y][x+i] != nullptr && board[y][x+i]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                        }
-                    }else if(this->get_pinDirection() == pinDirection::top || this->get_pinDirection() == pinDirection::bottom){
-                        for(int i = 1; y-i >= 0; i++){
-                            if(board[y-i][x] != nullptr && board[y-i][x]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                            validMoves = addToArr(x, y-i, validMoves);
-                            if(board[y-i][x] != nullptr && board[y-i][x]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                        }
-                        for(int i = 1; y+i <=7; i++){
-                            if(board[y+i][x] != nullptr && board[y+i][x]->get_PieceColor() == BLACK){
-                                break;
-                            }
-                            validMoves = addToArr(x, y+i, validMoves);
-                            if(board[y+i][x] != nullptr && board[y+i][x]->get_PieceColor() == WHITE){
-                                break;
-                            }
-                        }
-                    }
-                    return validMoves;
-                }
-                for(int i = 1; x-i >= 0; i++){
-                    if(board[y][x-i] != nullptr && board[y][x-i]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                    validMoves = addToArr(x-i, y, validMoves);
-                    if(board[y][x-i] != nullptr && board[y][x-i]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                }
-                for(int i = 1; x+i <=7; i++){
-                    if(board[y][x+i] != nullptr && board[y][x+i]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                    validMoves = addToArr(x+i, y, validMoves);
-                    if(board[y][x+i] != nullptr && board[y][x+i]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                }
-                for(int i = 1; y-i >= 0; i++){
-                    if(board[y-i][x] != nullptr && board[y-i][x]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                    validMoves = addToArr(x, y-i, validMoves);
-                    if(board[y-i][x] != nullptr && board[y-i][x]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                }
-                for(int i = 1; y+i <=7; i++){
-                    if(board[y+i][x] != nullptr && board[y+i][x]->get_PieceColor() == BLACK){
-                        break;
-                    }
-                    validMoves = addToArr(x, y+i, validMoves);
-                    if(board[y+i][x] != nullptr && board[y+i][x]->get_PieceColor() == WHITE){
-                        break;
-                    }
-                }
+            bool canMoveHorizontal = (
+                this->get_pinDirection() == pinDirection::NONE ||
+                this->get_pinDirection() == pinDirection::left ||
+                this->get_pinDirection() == pinDirection::right
+            )? true: false;
+            bool canMoveVertical = (
+                this->get_pinDirection() == pinDirection::NONE ||
+                this->get_pinDirection() == pinDirection::top ||
+                this->get_pinDirection() == pinDirection::bottom
+            )? true: false ;
+
+            if(canMoveHorizontal) {
+                getLaneMoves(board, p, left_x_offset,  0, validMoves); // Left
+                getLaneMoves(board, p,  right_x_offset,  0, validMoves); // Right
+            }
+
+            if(canMoveVertical) {
+                getLaneMoves(board, p,  0, top_y_offset, validMoves); // Up
+                getLaneMoves(board, p,  0,  bottom_y_offset, validMoves); // Down
             }
 
             return validMoves;
@@ -809,38 +412,25 @@ class queen: public chessPiece{
     public:
         queen(pieceColor c, bool pinned, pinDirection direction):chessPiece(c, pinned, direction){}
         ~queen(){}
-        Position * get_ValidMoves(chessPiece* board[8][8], Position p)const override {
-
+        Position * get_ValidMoves(const chessPiece* board[8][8], const Position p)const override {
             Position * validMoves = new Position[1];
 
-            if(this->get_PieceColor() == WHITE){
-                rook r(WHITE, this->get_isPinned(), this->get_pinDirection());
-                bishop b(WHITE, this->get_isPinned(), this->get_pinDirection());
+            rook r(this->get_PieceColor(), this->get_isPinned(), this->get_pinDirection());
+            bishop b(this->get_PieceColor(), this->get_isPinned(), this->get_pinDirection());
 
-                Position * rookMoves = r.get_ValidMoves(board, p);
-                Position * bishopMoves = b.get_ValidMoves(board, p);
+            Position * rookMoves = r.get_ValidMoves(board, p);
+            Position * bishopMoves = b.get_ValidMoves(board, p);
 
-                for(int i = 0; rookMoves[i].get_x() != INT_MAX && rookMoves[i].get_y() != INT_MAX; i++){
-                    validMoves = addToArr(rookMoves[i].get_x(), rookMoves[i].get_y(), validMoves);
-                }
-                for(int i = 0; bishopMoves[i].get_x() != INT_MAX && bishopMoves[i].get_y() != INT_MAX; i++){
-                    validMoves = addToArr(bishopMoves[i].get_x(), bishopMoves[i].get_y(), validMoves);
-                }
-
-            }else if(this->get_PieceColor() == BLACK){
-                rook r(BLACK, this->get_isPinned(), this->get_pinDirection());
-                bishop b(BLACK, this->get_isPinned(), this->get_pinDirection());
-
-                Position * rookMoves = r.get_ValidMoves(board, p);
-                Position * bishopMoves = b.get_ValidMoves(board, p);
-
-                for(int i = 0; rookMoves[i].get_x() != INT_MAX && rookMoves[i].get_y() != INT_MAX; i++){
-                    validMoves = addToArr(rookMoves[i].get_x(), rookMoves[i].get_y(), validMoves);
-                }
-                for(int i = 0; bishopMoves[i].get_x() != INT_MAX && bishopMoves[i].get_y() != INT_MAX; i++){
-                    validMoves = addToArr(bishopMoves[i].get_x(), bishopMoves[i].get_y(), validMoves);
-                }
+            for(int i = 0; rookMoves[i].get_x() != INT_MAX && rookMoves[i].get_y() != INT_MAX; i++){
+                validMoves = addToArr(rookMoves[i].get_x(), rookMoves[i].get_y(), validMoves);
             }
+            for(int i = 0; bishopMoves[i].get_x() != INT_MAX && bishopMoves[i].get_y() != INT_MAX; i++){
+                validMoves = addToArr(bishopMoves[i].get_x(), bishopMoves[i].get_y(), validMoves);
+            }
+
+            // 4. CRITICAL: Prevent Memory Leak
+            delete[] rookMoves;
+            delete[] bishopMoves;
 
             return validMoves;
         }
@@ -853,7 +443,7 @@ class king: public chessPiece{
     public:
         king(pieceColor c, bool pinned, pinDirection direction):chessPiece(c, pinned, direction), hasMoved(0){}
         ~king(){}
-        Position * get_ValidMoves(chessPiece* board[8][8], Position p)const override {
+        Position * get_ValidMoves(const chessPiece* board[8][8], const Position p)const override {
 
             Position * validMoves = new Position[1];
 
@@ -870,7 +460,7 @@ class king: public chessPiece{
                 ){
                     continue;
                 }
-                
+
                 validMoves = addToArr(x + xArr[i], y + yArr[i], validMoves);
             }
 
