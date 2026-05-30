@@ -2,26 +2,12 @@
 #define CLASSES_H
 
 #include <vector>
+#include <array>  
 
 enum pieceColor {
     WHITE,
     BLACK
 };
-
-enum pinDirection {
-    NONE,
-    diagonalLeft,
-    diagonalRight,
-    diagonalBottomLeft,
-    diagonalBottomRight,
-    top,
-    bottom,
-    left,
-    right
-};
-
-class Position;
-Position* addToArr(int x, int y, Position* arr);
 
 class Renderer {
 public: 
@@ -29,11 +15,8 @@ public:
     ~Renderer();
 };
 
-class Inputhandler {
-public:
-    Inputhandler();
-    ~Inputhandler();
-};
+class Position;
+Position* addToArr(int x, int y, Position* arr);
 
 class Position {
 private:
@@ -61,89 +44,92 @@ public:
     Position get_to() const;
 };
 
+class chessPiece; 
+
+using BoardMatrix = std::array<std::array<const chessPiece*, 8>, 8>;
+using MutableBoardMatrix = std::array<std::array<chessPiece*, 8>, 8>;
+
 class chessPiece {
 private:
     pieceColor color;
-    bool isPinnedToKing;
-    pinDirection d;
 public:
-    chessPiece(pieceColor c, bool pinned, pinDirection direction);
+    chessPiece(pieceColor c);
     virtual ~chessPiece();
-    virtual Position* get_ValidMoves(const chessPiece* board[8][8], const Position p) const = 0;
+    virtual Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const = 0;
     virtual void set_hasMoved(bool hm);
     pieceColor get_PieceColor() const;
-    bool get_isPinned() const;
-    void set_isPinned(bool value);
-    pinDirection get_pinDirection() const;
 };
 
 class pawn : public chessPiece {
 private:
     bool hasMoved;
 public:
-    pawn(pieceColor c, bool pinned, pinDirection direction);
+    pawn(pieceColor c);
     ~pawn();
-    Position* get_ValidMoves(const chessPiece* board[8][8], const Position p) const override;
+    Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
     bool get_hasMoved() const;
     void set_hasMoved(bool hm) override;
 };
 
 class knight : public chessPiece {
 public:
-    knight(pieceColor c, bool pinned, pinDirection direction);
+    knight(pieceColor c);
     ~knight();
-    Position* get_ValidMoves(const chessPiece* board[8][8], const Position p) const override;
+    Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
 };
 
 class bishop : public chessPiece {
 private:
-    void getDiagonalMoves(const chessPiece* board[8][8], const Position p, const int x_offset, const int y_offset, Position*& moves) const;
+    void getDiagonalMoves(const MutableBoardMatrix& board, const Position p, const int x_offset, const int y_offset, Position*& moves) const;
 public:
-    bishop(pieceColor c, bool pinned, pinDirection direction);
+    bishop(pieceColor c);
     ~bishop();
-    Position* get_ValidMoves(const chessPiece* board[8][8], const Position p) const override;
+    Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
 };
 
 class rook : public chessPiece {
 private:
     bool hasMoved;
-    void getLaneMoves(const chessPiece* board[8][8], const Position p, const int x_offset, const int y_offset, Position*& moves) const;
+    void getLaneMoves(const MutableBoardMatrix& board, const Position p, const int x_offset, const int y_offset, Position*& moves) const;
 public:
-    rook(pieceColor c, bool pinned, pinDirection direction);
+    rook(pieceColor c);
     ~rook();
-    Position* get_ValidMoves(const chessPiece* board[8][8], const Position p) const override;
+    Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
     bool get_hasMoved() const;
     void set_hasMoved(bool hm) override;
 };
 
 class queen : public chessPiece {
 public:
-    queen(pieceColor c, bool pinned, pinDirection direction);
+    queen(pieceColor c);
     ~queen();
-    Position* get_ValidMoves(const chessPiece* board[8][8], const Position p) const override;
+    Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
 };
 
 class king : public chessPiece {
 private:
     bool hasMoved;
 public:
-    king(pieceColor c, bool pinned, pinDirection direction);
+    king(pieceColor c);
     ~king();
-    Position* get_ValidMoves(const chessPiece* board[8][8], const Position p) const override;
+    Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
     bool get_hasMoved() const;
     void set_hasMoved(bool hm) override;
 };
 
 class ChessBoard {
 private:
-    chessPiece* board[8][8];
+    MutableBoardMatrix board;
     int blackMaterial;
     int whiteMaterial;
 public:
     ChessBoard();
     ~ChessBoard();
-    bool isInCheck(pieceColor p) const;
-    void validateMovement(Movement m);
+    
+    MutableBoardMatrix getBoard() const;
+
+    bool isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const;
+    Position* getStrictlyLegalMoves(Position fromPos) const;
     void applyMovement(Movement m);
     chessPiece* at(int x, int y) const;
     void place(chessPiece*& piece, int x, int y);
@@ -155,21 +141,17 @@ class game {
 private:
     ChessBoard board;
     std::vector<Movement> moves;
-    Renderer renderer;
-    Inputhandler inputhandler;
     bool isOver;
     pieceColor currentTurn;
     int lastCaptureMove;
     int currentMoveIndex;
+    Renderer renderer;
 public:
     game();
     ~game();
     void game_save();
     void game_replay();
     void game_run();
-    void action_nextPosition();
-    void action_pastPosition();
-    void action_select(Position p);
     std::vector<Movement> get_Moves();
 };
 
