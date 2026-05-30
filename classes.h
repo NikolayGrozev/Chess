@@ -177,10 +177,12 @@ public:
     game();
     ~game();
     bool insufficientMaterial(pieceColor color) const;
-    void game_save();
     void game_replay();
     void game_run();
     std::vector<Movement> get_Moves();
+
+    friend std::ostream& operator<<(std::ostream& os, const game& g);
+    friend std::istream& operator>>(std::istream& in, const game g);
 };
 
 #endif // CLASSES_H

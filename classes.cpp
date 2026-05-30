@@ -6,6 +6,7 @@
 #include <typeinfo>
 #include <algorithm>
 #include <SFML/Graphics.hpp>
+#include <sstream>
 
 using namespace std;
 
@@ -716,6 +717,41 @@ bool game::insufficientMaterial(pieceColor color) const {
     return (minorPieceScore <= 3);
 }
 
+vector<Movement> game::get_Moves() {
+    return this->moves;
+}
+
+std::ostream& operator<<(std::ostream& os, const game& g) {
+    for (const auto& move : g.moves) {
+        os << move.get_from().get_x() << "," << move.get_from().get_y() 
+           << "->" 
+           << move.get_to().get_x() << "," << move.get_to().get_y() 
+           << "\n";
+    }
+    return os;
+}
+std::istream& operator>>(std::istream& is, game g) {
+    g.moves.clear();
+
+    std::string line;
+
+    while (std::getline(is, line)) {
+        if (line.empty()) continue;
+
+        std::stringstream ss(line);
+        int fromX, fromY, toX, toY;
+        char comma, dash, greaterThan;
+
+        // Extract expected structure: X , Y - > X , Y
+        if (ss >> fromX >> comma >> fromY >> dash >> greaterThan >> toX >> comma >> toY) {
+            // Reconstruct the structural movement abstraction object
+            Movement loadedMove(fromX, fromY, toX, toY);
+            g.moves.push_back(loadedMove);
+        }
+    }
+    return is;
+}
+
 void game::game_run() {
     sf::RenderWindow window(sf::VideoMode(1000, 1000), "Chess Match - Active Gameplay");
     
@@ -907,10 +943,5 @@ void game::game_run() {
     }
 }
 
-void game::game_save() {}
-
 void game::game_replay() {}
 
-vector<Movement> game::get_Moves() {
-    return this->moves;
-}

@@ -1,5 +1,5 @@
 main.exe: main.cpp classes.o
-	g++ main.cpp classes.o -o main.exe
+	g++ main.cpp classes.o -o main.exe -lsfml-graphics -lsfml-window -lsfml-system
 
 testVisualization.exe: testVisualization.cpp classes.o
 	g++ testVisualization.cpp classes.o -o testVisualization.exe -lsfml-graphics -lsfml-window -lsfml-system
