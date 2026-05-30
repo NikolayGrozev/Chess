@@ -4,10 +4,11 @@
 #include <limits.h>
 #include <vector>
 #include <typeinfo>
+#include <algorithm>
+#include <SFML/Graphics.hpp>
 
 using namespace std;
-Renderer::Renderer() {}
-Renderer::~Renderer() {}
+
 Position::Position() : x(INT_MAX), y(INT_MAX) {}
 
 Position::Position(int x, int y) {
@@ -70,7 +71,9 @@ chessPiece::chessPiece(pieceColor c) : color(c) {}
 
 chessPiece::~chessPiece() {}
 
-void chessPiece::set_hasMoved(bool hm) {}
+void chessPiece::set_hasMoved(bool hm) {
+    return;
+}
 
 pieceColor chessPiece::get_PieceColor() const {
     return this->color;
@@ -244,7 +247,6 @@ Position * rook::get_ValidMoves(const MutableBoardMatrix& board, const Position 
     const int top_y_offset = (this->get_PieceColor() == WHITE) ? -1 : 1;
     const int bottom_y_offset = (this->get_PieceColor() == WHITE) ? 1 : -1;
 
-
     getLaneMoves(board, p, left_x_offset,  0, validMoves); 
     getLaneMoves(board, p,  right_x_offset,  0, validMoves); 
     getLaneMoves(board, p,  0, top_y_offset, validMoves); 
@@ -348,7 +350,6 @@ MutableBoardMatrix ChessBoard:: getBoard() const{
 }
 
 bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const {
-    // 1. Locate the King of the specified color 'p' on the PROVIDED matrix
     int kingX = -1, kingY = -1;
     for (int y = 0; y < 8; ++y) {
         for (int x = 0; x < 8; ++x) {
@@ -371,13 +372,12 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     Position kingPos(kingX, kingY);
     pieceColor enemyColor = (p == WHITE) ? BLACK : WHITE;
 
-    // 2. Check Rook / Queen threats
     rook dummyRook(p);
     Position* rookMoves = dummyRook.get_ValidMoves(matrix, kingPos);
     for (int i = 0; rookMoves[i].get_x() != INT_MAX && rookMoves[i].get_y() != INT_MAX; i++) {
         int tx = rookMoves[i].get_x();
         int ty = rookMoves[i].get_y();
-        const chessPiece* enemy = matrix[ty][tx]; // Safely reading from the provided matrix
+        const chessPiece* enemy = matrix[ty][tx];
         if (enemy != nullptr && enemy->get_PieceColor() == enemyColor) {
             if (typeid(*enemy) == typeid(rook) || typeid(*enemy) == typeid(queen)) {
                 delete[] rookMoves;
@@ -387,7 +387,6 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     }
     delete[] rookMoves;
 
-    // 3. Check Bishop / Queen threats
     bishop dummyBishop(p);
     Position* bishopMoves = dummyBishop.get_ValidMoves(matrix, kingPos);
     for (int i = 0; bishopMoves[i].get_x() != INT_MAX && bishopMoves[i].get_y() != INT_MAX; i++) {
@@ -403,7 +402,6 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     }
     delete[] bishopMoves;
 
-    // 4. Check Knight threats
     knight dummyKnight(p);
     Position* knightMoves = dummyKnight.get_ValidMoves(matrix, kingPos);
     for (int i = 0; knightMoves[i].get_x() != INT_MAX && knightMoves[i].get_y() != INT_MAX; i++) {
@@ -419,7 +417,6 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     }
     delete[] knightMoves;
 
-    // 5. Check Pawn threats
     pawn dummyPawn(p);
     Position* pawnMoves = dummyPawn.get_ValidMoves(matrix, kingPos);
     for (int i = 0; pawnMoves[i].get_x() != INT_MAX && pawnMoves[i].get_y() != INT_MAX; i++) {
@@ -435,7 +432,6 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     }
     delete[] pawnMoves;
 
-    // 6. Check King threats
     king dummyKing(p);
     Position* kingMoves = dummyKing.get_ValidMoves(matrix, kingPos);
     for (int i = 0; kingMoves[i].get_x() != INT_MAX && kingMoves[i].get_y() != INT_MAX; i++) {
@@ -462,7 +458,6 @@ Position* ChessBoard::getStrictlyLegalMoves(Position fromPos) const {
         return emptyArr; 
     }
 
-    // 1. Grab the RAW pseudo-legal moves using the baseline matrix
     MutableBoardMatrix baseMatrix = this->getBoard();
     Position* pseudoMoves = movingPiece->get_ValidMoves(baseMatrix, fromPos);
 
@@ -472,22 +467,18 @@ Position* ChessBoard::getStrictlyLegalMoves(Position fromPos) const {
     }
 
     std::vector<Position> safeMoves;
-    safeMoves.reserve(32); // Pre-allocate to prevent heap reallocations
+    safeMoves.reserve(32); 
     pieceColor myColor = movingPiece->get_PieceColor();
 
-    // 2. SIMULATION FILTER
     for (int i = 0; i < pseudoCount; i++) {
         int toX = pseudoMoves[i].get_x();
         int toY = pseudoMoves[i].get_y();
 
-        // Copy the board matrix purely for this single simulation (instant copy)
         MutableBoardMatrix simMatrix = baseMatrix;
         
-        // Execute the move ON THE COPY ONLY
         simMatrix[toY][toX] = simMatrix[fromPos.get_y()][fromPos.get_x()];
         simMatrix[fromPos.get_y()][fromPos.get_x()] = nullptr;
 
-        // Verify King Safety against the simulated board state
         if (!this->isInCheck(myColor, simMatrix)) {
             safeMoves.push_back(Position(toX, toY));
         }
@@ -495,7 +486,6 @@ Position* ChessBoard::getStrictlyLegalMoves(Position fromPos) const {
 
     delete[] pseudoMoves;
 
-    // 3. Package results into your standard array format
     Position* strictlyLegalArr = new Position[safeMoves.size() + 1];
     for (size_t i = 0; i < safeMoves.size(); i++) {
         strictlyLegalArr[i] = safeMoves[i];
@@ -504,6 +494,29 @@ Position* ChessBoard::getStrictlyLegalMoves(Position fromPos) const {
 
     return strictlyLegalArr;
 }
+
+bool ChessBoard:: hasNoValidMoves(pieceColor color) const{
+    for (int y = 0; y < 8; ++y) {
+        for (int x = 0; x < 8; ++x) {
+            const chessPiece* piece = this->board[y][x];
+            
+            // Look for pieces matching the requested color
+            if (piece != nullptr && piece->get_PieceColor() == color) {
+                Position currentPos(x, y);
+                Position* legalMoves = this->getStrictlyLegalMoves(currentPos);
+                
+                if (legalMoves[0].get_x() != INT_MAX) {
+                    delete[] legalMoves; 
+                    return false; 
+                }
+                
+                delete[] legalMoves;
+            }
+        }
+    }
+
+    return true;
+};
 
 void ChessBoard::applyMovement(Movement m) {
     int fromX = m.get_from().get_x();
@@ -521,7 +534,6 @@ void ChessBoard::applyMovement(Movement m) {
 
     if (targetPiece != nullptr) {
         delete targetPiece; 
-        
     }
 
     this->board[toY][toX] = movingPiece;
@@ -549,23 +561,355 @@ int ChessBoard::get_blackMaterial() const {
     return blackMaterial;
 }
 
+// =========================================================================
+// RENDERER IMPLEMENTATION
+// =========================================================================
+Renderer::Renderer() {
+    fallbackPlaceholder.setRadius(PIECE_SIZE / 2.0f);
+    fallbackPlaceholder.setOrigin(PIECE_SIZE / 2.0f, PIECE_SIZE / 2.0f);
+
+    if (!boardTexture.loadFromFile("assets/board2.png")) {
+        std::cerr << "Warning: assets/board2.png missing!\n";
+    }
+    boardSprite.setTexture(boardTexture);
+    boardSprite.setPosition(ASSET_PADDING, ASSET_PADDING);
+
+    std::string colors[] = {"w", "b"};
+    for (int c = 0; c < 2; c++) {
+        pawnTex[c].loadFromFile("assets/" + colors[c] + "pawn.png");
+        pawnSprite[c].setTexture(pawnTex[c]); configureSprite(pawnSprite[c], PIECE_SIZE);
+
+        knightTex[c].loadFromFile("assets/" + colors[c] + "knight.png");
+        knightSprite[c].setTexture(knightTex[c]); configureSprite(knightSprite[c], PIECE_SIZE);
+
+        bishopTex[c].loadFromFile("assets/" + colors[c] + "bishop.png");
+        bishopSprite[c].setTexture(bishopTex[c]); configureSprite(bishopSprite[c], PIECE_SIZE);
+
+        rookTex[c].loadFromFile("assets/" + colors[c] + "rook.png");
+        rookSprite[c].setTexture(rookTex[c]); configureSprite(rookSprite[c], PIECE_SIZE);
+
+        queenTex[c].loadFromFile("assets/" + colors[c] + "queen.png");
+        queenSprite[c].setTexture(queenTex[c]); configureSprite(queenSprite[c], PIECE_SIZE);
+
+        kingTex[c].loadFromFile("assets/" + colors[c] + "king.png");
+        kingSprite[c].setTexture(kingTex[c]); configureSprite(kingSprite[c], PIECE_SIZE);
+    }
+}
+
+Renderer::~Renderer() {}
+
+void Renderer::configureSprite(sf::Sprite& sprite, float targetSize) {
+    sf::FloatRect bounds = sprite.getLocalBounds();
+    if (bounds.width > 0 && bounds.height > 0) {
+        sprite.setOrigin(bounds.width / 2.0f, bounds.height / 2.0f);
+        sprite.setScale(targetSize / bounds.width, targetSize / bounds.height);
+    }
+}
+
+sf::Vector2i Renderer::mapPixelToGrid(float mouseX, float mouseY) const {
+    if (mouseX < OFFSET_X || mouseY < OFFSET_Y) return sf::Vector2i(-1, -1);
+    int gridX = static_cast<int>((mouseX - OFFSET_X) / SQUARE_SIZE);
+    int gridY = static_cast<int>((mouseY - OFFSET_Y) / SQUARE_SIZE);
+    if (gridX >= 0 && gridX < 8 && gridY >= 0 && gridY < 8) return sf::Vector2i(gridX, gridY);
+    return sf::Vector2i(-1, -1);
+}
+
+void Renderer::drawGridHighlights(sf::RenderWindow& window, const std::vector<sf::Vector2i>& coordinates) const {
+    sf::CircleShape indicator(20.0f);
+    indicator.setOrigin(20.0f, 20.0f);   
+    indicator.setFillColor(sf::Color(255, 0, 0, 160)); 
+
+    for (const auto& coord : coordinates) {
+        if (coord.x >= 0 && coord.x < 8 && coord.y >= 0 && coord.y < 8) {
+            float cX = OFFSET_X + (coord.x * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
+            float cY = OFFSET_Y + (coord.y * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
+            indicator.setPosition(cX, cY);
+            window.draw(indicator);
+        }
+    }
+}
+
+void Renderer::drawCoreChessboard(sf::RenderWindow& window, const ChessBoard& board) {
+    if (boardTexture.getNativeHandle() != 0) {
+        window.draw(boardSprite);
+    } else {
+        sf::RectangleShape defaultBoard(sf::Vector2f(900.0f, 900.0f));
+        defaultBoard.setPosition(ASSET_PADDING, ASSET_PADDING);
+        defaultBoard.setFillColor(sf::Color(34, 139, 34));
+        window.draw(defaultBoard);
+    }
+
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+            chessPiece* piece = board.at(x, y);
+            if (piece != nullptr) {
+                sf::Sprite* spr = nullptr;
+                int cIdx = (piece->get_PieceColor() == WHITE) ? 0 : 1;
+
+                if (typeid(*piece) == typeid(pawn))           spr = &pawnSprite[cIdx];
+                else if (typeid(*piece) == typeid(knight))    spr = &knightSprite[cIdx];
+                else if (typeid(*piece) == typeid(bishop))    spr = &bishopSprite[cIdx];
+                else if (typeid(*piece) == typeid(rook))      spr = &rookSprite[cIdx];
+                else if (typeid(*piece) == typeid(queen))     spr = &queenSprite[cIdx];
+                else if (typeid(*piece) == typeid(king))      spr = &kingSprite[cIdx];
+
+                float cX = OFFSET_X + (x * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
+                float cY = OFFSET_Y + (y * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
+
+                if (spr != nullptr && spr->getTexture() != nullptr && spr->getTexture()->getNativeHandle() != 0) {
+                    spr->setPosition(cX, cY);
+                    window.draw(*spr);
+                } else {
+                    const_cast<sf::CircleShape&>(fallbackPlaceholder).setPosition(cX, cY);
+                    const_cast<sf::CircleShape&>(fallbackPlaceholder).setFillColor(cIdx == 0 ? sf::Color(240,240,240) : sf::Color(40,40,40));
+                    window.draw(fallbackPlaceholder);
+                }
+            }
+        }
+    }
+}
+
+void Renderer::game_renderBoard(sf::RenderWindow& window, const ChessBoard& board) {
+    drawCoreChessboard(window, board);
+}
+
+void Renderer::replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board) {
+    drawCoreChessboard(window, board);
+}
+
+// =========================================================================
+// GAME CONTROL LOGIC
+// =========================================================================
 game::game() :
     isOver(false),
-    lastCaptureMove(0),
-    currentMoveIndex(0),
+    moves_Since_Last_Capture(0),
     currentTurn(WHITE),
     board()
 {}
 
 game::~game() {}
 
+bool game::insufficientMaterial(pieceColor color) const {
+    int minorPieceScore = 0;
+    
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+            chessPiece* piece = board.at(x, y);
+            if (piece == nullptr) continue;
+
+            if (typeid(*piece) == typeid(pawn) && piece->get_PieceColor() == color) {
+                return false; 
+            }
+            // Group with parentheses to override native && operator precedence rules
+            if ((typeid(*piece) == typeid(rook) || typeid(*piece) == typeid(queen)) && piece->get_PieceColor() == color) {
+                return false; 
+            }
+            if (typeid(*piece) == typeid(knight) && piece->get_PieceColor() == color) {
+                minorPieceScore += 3;
+            }
+            if (typeid(*piece) == typeid(bishop) && piece->get_PieceColor() == color) {
+                minorPieceScore += 3;
+            }
+        }
+    }
+
+    return (minorPieceScore <= 3);
+}
+
+void game::game_run() {
+    sf::RenderWindow window(sf::VideoMode(1000, 1000), "Chess Match - Active Gameplay");
+    
+    sf::View view(sf::FloatRect(0.f, 0.f, 1000.f, 1000.f));
+    window.setView(view);
+
+    std::vector<sf::Vector2i> activeHighlights;
+    sf::Vector2i selectedPieceCoord(-1, -1);
+    
+    this->isOver = false;
+    this->currentTurn = WHITE;
+    this->moves_Since_Last_Capture = 0;
+
+    // =========================================================================
+    // STANDARD CHESS BOARD PIECE PLACEMENT INITIALIZATION
+    // =========================================================================
+    // 1. Place Pawns across rows 1 (Black) and 6 (White)
+    for (int x = 0; x < 8; x++) {
+        chessPiece* bPawn = new pawn(BLACK);
+        chessPiece* wPawn = new pawn(WHITE);
+        board.place(bPawn, x, 1);
+        board.place(wPawn, x, 6);
+    }
+
+    // 2. Place Rooks
+    chessPiece* bRook1 = new rook(BLACK);   chessPiece* bRook2 = new rook(BLACK);
+    chessPiece* wRook1 = new rook(WHITE);   chessPiece* wRook2 = new rook(WHITE);
+    board.place(bRook1, 0, 0); board.place(bRook2, 7, 0);
+    board.place(wRook1, 0, 7); board.place(wRook2, 7, 7);
+
+    // 3. Place Knights
+    chessPiece* bKnight1 = new knight(BLACK); chessPiece* bKnight2 = new knight(BLACK);
+    chessPiece* wKnight1 = new knight(WHITE); chessPiece* wKnight2 = new knight(WHITE);
+    board.place(bKnight1, 1, 0); board.place(bKnight2, 6, 0);
+    board.place(wKnight1, 1, 7); board.place(wKnight2, 6, 7);
+
+    // 4. Place Bishops
+    chessPiece* bBishop1 = new bishop(BLACK); chessPiece* bBishop2 = new bishop(BLACK);
+    chessPiece* wBishop1 = new bishop(WHITE); chessPiece* wBishop2 = new bishop(WHITE);
+    board.place(bBishop1, 2, 0); board.place(bBishop2, 5, 0);
+    board.place(wBishop1, 2, 7); board.place(wBishop2, 5, 7);
+
+    // 5. Place Queens (File x=3)
+    chessPiece* bQueen = new queen(BLACK);
+    chessPiece* wQueen = new queen(WHITE);
+    board.place(bQueen, 3, 0);
+    board.place(wQueen, 3, 7);
+
+    // 6. Place Kings (File x=4)
+    chessPiece* bKing = new king(BLACK);
+    chessPiece* wKing = new king(WHITE);
+    board.place(bKing, 4, 0);
+    board.place(wKing, 4, 7);
+
+    std::cout << "Starting Match: White's Turn" << std::endl;
+
+    while (window.isOpen() && !this->isOver) {
+
+        // =====================================================================
+        // ACTIVE TURN STATE VALIDATION SCANNER (CHECKMATE / STALEMATE)
+        // =====================================================================
+        if (board.hasNoValidMoves(this->currentTurn)) {
+            MutableBoardMatrix currentMatrix = board.getBoard();
+            
+            if (board.isInCheck(this->currentTurn, currentMatrix)) {
+                std::cout << "\n==============================================" << std::endl;
+                std::cout << " MATCH OVER: CHECKMATE!" << std::endl;
+                std::cout << " " << ((this->currentTurn == WHITE) ? "White" : "Black") << " has no legal escape options." << std::endl;
+                std::cout << " " << ((this->currentTurn == WHITE) ? "BLACK" : "WHITE") << " WINS THE MATCH!" << std::endl;
+                std::cout << "==============================================" << std::endl;
+            } else {
+                std::cout << "\n==============================================" << std::endl;
+                std::cout << " MATCH OVER: STALEMATE!" << std::endl;
+                std::cout << " " << ((this->currentTurn == WHITE) ? "White" : "Black") << " is not in check but has zero legal moves." << std::endl;
+                std::cout << " The match ends in a DRAW." << std::endl;
+                std::cout << "==============================================" << std::endl;
+            }
+            
+            this->isOver = true;
+            break; // Drop out of rendering frames immediately
+        }
+
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+                return; 
+            }
+
+            if (event.type == sf::Event::Resized) {
+                float newWidth = std::max(1000.f, static_cast<float>(event.size.width));
+                float newHeight = std::max(1000.f, static_cast<float>(event.size.height));
+                window.setSize(sf::Vector2u(newWidth, newHeight));
+
+                float windowRatio = newWidth / newHeight;
+                float targetRatio = 1.0f;
+                float vpW = 1.0f, vpH = 1.0f, vpX = 0.0f, vpY = 0.0f;
+
+                if (windowRatio > targetRatio) {
+                    vpW = targetRatio / windowRatio;
+                    vpX = (1.0f - vpW) / 2.0f;
+                } else {
+                    vpH = windowRatio / targetRatio;
+                    vpY = (1.0f - vpH) / 2.0f;
+                }
+                view.setViewport(sf::FloatRect(vpX, vpY, vpW, vpH));
+                window.setView(view);
+            }
+
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
+                    sf::Vector2f mappedMouse = window.mapPixelToCoords(rawMouse);
+
+                    sf::Vector2i clickedGrid = renderer.mapPixelToGrid(mappedMouse.x, mappedMouse.y);
+
+                    bool clickedLegalMove = false;
+                    for (const auto& move : activeHighlights) {
+                        if (clickedGrid.x == move.x && clickedGrid.y == move.y) {
+                            clickedLegalMove = true;
+                            break;
+                        }
+                    }
+
+                    if (clickedLegalMove) {
+                        Movement finalizedMove(selectedPieceCoord.x, selectedPieceCoord.y, clickedGrid.x, clickedGrid.y);
+                        
+                        chessPiece* destinationTarget = board.at(clickedGrid.x, clickedGrid.y);
+                        chessPiece* movingPiece = board.at(selectedPieceCoord.x, selectedPieceCoord.y);
+
+                        if (destinationTarget != nullptr || typeid(*movingPiece) == typeid(pawn)) {
+                            this->moves_Since_Last_Capture = 0; 
+                        } else {
+                            this->moves_Since_Last_Capture++;
+                        }
+
+                        board.applyMovement(finalizedMove);
+                        moves.push_back(finalizedMove);
+
+                        activeHighlights.clear();
+                        selectedPieceCoord = sf::Vector2i(-1, -1);
+
+                        this->currentTurn = (this->currentTurn == WHITE) ? BLACK : WHITE;
+                        std::cout << "Turn Swapped. Current Player: " 
+                                  << ((currentTurn == WHITE) ? "White" : "Black") << std::endl;
+
+                        if (this->moves_Since_Last_Capture >= 100) { 
+                            std::cout << "Match Terminated: 50-Move Rule Triggered (Draw)!" << std::endl;
+                            this->isOver = true;
+                        }
+                        if (insufficientMaterial(WHITE) && insufficientMaterial(BLACK)) {
+                            std::cout << "Match Terminated: Insufficient Material Rule Triggered (Draw)!" << std::endl;
+                            this->isOver = true;
+                        }
+                    }
+                    else if (clickedGrid.x != -1) {
+                        chessPiece* selectedPiece = board.at(clickedGrid.x, clickedGrid.y);
+
+                        if (selectedPiece != nullptr && selectedPiece->get_PieceColor() == this->currentTurn) {
+                            activeHighlights.clear();
+                            selectedPieceCoord = clickedGrid;
+
+                            Position nativePos(clickedGrid.x, clickedGrid.y);
+                            Position* legalMovesArray = board.getStrictlyLegalMoves(nativePos);
+
+                            for (int i = 0; legalMovesArray[i].get_x() != INT_MAX && legalMovesArray[i].get_y() != INT_MAX; i++) {
+                                activeHighlights.push_back(sf::Vector2i(legalMovesArray[i].get_x(), legalMovesArray[i].get_y()));
+                            }
+
+                            delete[] legalMovesArray; 
+                        } else {
+                            activeHighlights.clear();
+                            selectedPieceCoord = sf::Vector2i(-1, -1);
+                        }
+                    } else {
+                        activeHighlights.clear();
+                        selectedPieceCoord = sf::Vector2i(-1, -1);
+                    }
+                }
+            }
+        }
+
+        window.clear(sf::Color::Black);
+        
+        renderer.game_renderBoard(window, board); 
+        renderer.drawGridHighlights(window, activeHighlights);
+        
+        window.display();
+    }
+}
+
 void game::game_save() {}
 
 void game::game_replay() {}
-
-void game::game_run() {
-    
-}
 
 vector<Movement> game::get_Moves() {
     return this->moves;

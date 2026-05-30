@@ -3,16 +3,11 @@
 
 #include <vector>
 #include <array>  
+#include <SFML/Graphics.hpp>
 
 enum pieceColor {
     WHITE,
     BLACK
-};
-
-class Renderer {
-public: 
-    Renderer();
-    ~Renderer();
 };
 
 class Position;
@@ -130,11 +125,44 @@ public:
 
     bool isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const;
     Position* getStrictlyLegalMoves(Position fromPos) const;
+    bool hasNoValidMoves(pieceColor color) const;
+
     void applyMovement(Movement m);
     chessPiece* at(int x, int y) const;
     void place(chessPiece*& piece, int x, int y);
     int get_whiteMaterial() const;
     int get_blackMaterial() const;
+};
+
+class Renderer {
+private:
+    sf::Texture boardTexture;
+    sf::Texture pawnTex[2], knightTex[2], bishopTex[2], rookTex[2], queenTex[2], kingTex[2];
+    sf::Sprite boardSprite;
+    sf::Sprite pawnSprite[2], knightSprite[2], bishopSprite[2], rookSprite[2], queenSprite[2], kingSprite[2];
+    sf::CircleShape fallbackPlaceholder;
+
+    // Board Layout Metrics
+    const float SQUARE_SIZE   = 100.0f; 
+    const float ASSET_PADDING = 50.0f;  
+    const float BOARD_OUTLINE = 50.0f;  
+    const float OFFSET_X      = ASSET_PADDING + BOARD_OUTLINE; 
+    const float OFFSET_Y      = ASSET_PADDING + BOARD_OUTLINE; 
+    const float PIECE_SIZE    = 75.0f;  
+
+    void configureSprite(sf::Sprite& sprite, float targetSize);
+    void drawCoreChessboard(sf::RenderWindow& window, const ChessBoard& board);
+
+public: 
+    Renderer();
+    ~Renderer();
+    
+    sf::Vector2i mapPixelToGrid(float mouseX, float mouseY) const;
+    void drawGridHighlights(sf::RenderWindow& window, const std::vector<sf::Vector2i>& coordinates) const;
+    
+    // Core state-driven rendering methods
+    void game_renderBoard(sf::RenderWindow& window, const ChessBoard& board) ;
+    void replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board);
 };
 
 class game {
@@ -143,12 +171,12 @@ private:
     std::vector<Movement> moves;
     bool isOver;
     pieceColor currentTurn;
-    int lastCaptureMove;
-    int currentMoveIndex;
+    int moves_Since_Last_Capture;
     Renderer renderer;
 public:
     game();
     ~game();
+    bool insufficientMaterial(pieceColor color) const;
     void game_save();
     void game_replay();
     void game_run();
