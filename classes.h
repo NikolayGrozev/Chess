@@ -129,6 +129,7 @@ public:
     Position getEnPassantTarget() const;
     void setEnPassantTarget(Position p);
     void clearEnPassantTarget();
+    void clearBoard();
 
     bool isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const;
     Position* getStrictlyLegalMoves(Position fromPos) const;
@@ -149,6 +150,8 @@ private:
     sf::Texture pawnTex[2], knightTex[2], bishopTex[2], rookTex[2], queenTex[2], kingTex[2];
     sf::Sprite boardSprite;
     sf::Sprite pawnSprite[2], knightSprite[2], bishopSprite[2], rookSprite[2], queenSprite[2], kingSprite[2];
+    sf::Texture nextTurnTex, prevTurnTex, surrenderTex;
+    sf::Sprite nextTurnSprite, prevTurnSprite, surrenderSprite;
     sf::CircleShape fallbackPlaceholder;
 
     // Board Layout Metrics
@@ -186,7 +189,8 @@ public:
     game();
     ~game();
     bool insufficientMaterial(pieceColor color) const;
-    void game_replay();
+    void setupInitialBoard();
+    void game_replay(std::string filename);
     void game_run();
     std::vector<Movement> get_Moves();
 

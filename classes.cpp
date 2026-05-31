@@ -343,6 +343,20 @@ Position ChessBoard::getEnPassantTarget() const { return enPassantTarget; }
 void ChessBoard::setEnPassantTarget(Position p) { enPassantTarget = p; }
 void ChessBoard::clearEnPassantTarget() { enPassantTarget = Position(); }
 
+void ChessBoard::clearBoard() {
+    for(int i = 0; i < 8; i++){
+        for(int j = 0; j < 8; j++){
+            if(this->board[i][j] != nullptr){
+                delete this->board[i][j];
+                this->board[i][j] = nullptr;
+            }
+        }
+    }
+    this->whiteMaterial = 0;
+    this->blackMaterial = 0;
+    this->clearEnPassantTarget();
+}
+
 ChessBoard::~ChessBoard() {
     for(int i = 0; i < 8; i++){
         for(int j = 0; j < 8; j++){
@@ -710,6 +724,24 @@ Renderer::Renderer() {
         kingTex[c].loadFromFile("assets/" + colors[c] + "king.png");
         kingSprite[c].setTexture(kingTex[c]); configureSprite(kingSprite[c], PIECE_SIZE);
     }
+
+    if (!nextTurnTex.loadFromFile("assets/nextTurn.png")) {
+        std::cerr << "Warning: assets/nextTurn.png missing!\n";
+    }
+    nextTurnSprite.setTexture(nextTurnTex);
+    configureSprite(nextTurnSprite, 75.0f);
+
+    if (!prevTurnTex.loadFromFile("assets/previousTurn.png")) {
+        std::cerr << "Warning: assets/previousTurn.png missing!\n";
+    }
+    prevTurnSprite.setTexture(prevTurnTex);
+    configureSprite(prevTurnSprite, 75.0f);
+
+    if (!surrenderTex.loadFromFile("assets/surrender.png")) {
+        std::cerr << "Warning: assets/surrender.png missing!\n";
+    }
+    surrenderSprite.setTexture(surrenderTex);
+    configureSprite(surrenderSprite, 75.0f);
 }
 
 Renderer::~Renderer() {}
@@ -828,18 +860,25 @@ void Renderer::game_renderBoard(sf::RenderWindow& window, const ChessBoard& boar
     turnIndicator.setOutlineColor(sf::Color(150, 150, 150)); // Gray border so black circle doesn't vanish
     window.draw(turnIndicator);
 
-    // 2. Surrender Button (Red Rectangle)
-    sf::RectangleShape surrenderBtn(sf::Vector2f(80.0f, 40.0f));
-    surrenderBtn.setOrigin(40.0f, 20.0f);
-    surrenderBtn.setPosition(950.0f, 200.0f);
-    surrenderBtn.setFillColor(sf::Color(200, 0, 0));
-    surrenderBtn.setOutlineThickness(2.0f);
-    surrenderBtn.setOutlineColor(sf::Color::White);
-    window.draw(surrenderBtn);
+    // 2. Surrender Button
+    if (surrenderTex.getNativeHandle() != 0) {
+        surrenderSprite.setPosition(950.0f, 200.0f);
+        window.draw(surrenderSprite);
+    }
 }
 
 void Renderer::replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor) {
     drawCoreChessboard(window, board, viewColor);
+    
+    if (prevTurnTex.getNativeHandle() != 0) {
+        prevTurnSprite.setPosition(950.0f, 300.0f);
+        window.draw(prevTurnSprite);
+    }
+    
+    if (nextTurnTex.getNativeHandle() != 0) {
+        nextTurnSprite.setPosition(950.0f, 400.0f);
+        window.draw(nextTurnSprite);
+    }
 }
 
 // =========================================================================
@@ -932,55 +971,7 @@ void game::game_run() {
     // =========================================================================
     // STANDARD CHESS BOARD PIECE PLACEMENT INITIALIZATION
     // =========================================================================
-    // 1. Place Pawns across rows 1 (Black) and 6 (White)
-    for (int x = 0; x < 8; x++) {
-        chessPiece* bPawn = new pawn(BLACK, 1);
-        chessPiece* wPawn = new pawn(WHITE, 1);
-        board.place(bPawn, x, 1);
-        board.place(wPawn, x, 6);
-        board.set_blackMaterial(board.get_blackMaterial()+bPawn->getMaterial());
-        board.set_whiteMaterial(board.get_whiteMaterial()+wPawn->getMaterial());
-
-    }
-
-    // 2. Place Rooks
-    chessPiece* bRook1 = new rook(BLACK, 5);   chessPiece* bRook2 = new rook(BLACK, 5);
-    chessPiece* wRook1 = new rook(WHITE, 5);   chessPiece* wRook2 = new rook(WHITE, 5);
-    board.place(bRook1, 0, 0); board.place(bRook2, 7, 0);
-    board.place(wRook1, 0, 7); board.place(wRook2, 7, 7);
-    board.set_blackMaterial(board.get_blackMaterial()+(2*bRook1->getMaterial()));
-    board.set_whiteMaterial(board.get_whiteMaterial()+(2*wRook1->getMaterial()));
-
-    // 3. Place Knights
-    chessPiece* bKnight1 = new knight(BLACK, 3); chessPiece* bKnight2 = new knight(BLACK, 3);
-    chessPiece* wKnight1 = new knight(WHITE, 3); chessPiece* wKnight2 = new knight(WHITE, 3);
-    board.place(bKnight1, 1, 0); board.place(bKnight2, 6, 0);
-    board.place(wKnight1, 1, 7); board.place(wKnight2, 6, 7);
-
-    board.set_blackMaterial(board.get_blackMaterial()+(2*bKnight1->getMaterial()));
-    board.set_whiteMaterial(board.get_whiteMaterial()+(2*wKnight1->getMaterial()));
-
-    // 4. Place Bishops
-    chessPiece* bBishop1 = new bishop(BLACK, 3); chessPiece* bBishop2 = new bishop(BLACK, 3);
-    chessPiece* wBishop1 = new bishop(WHITE, 3); chessPiece* wBishop2 = new bishop(WHITE, 3);
-    board.place(bBishop1, 2, 0); board.place(bBishop2, 5, 0);
-    board.place(wBishop1, 2, 7); board.place(wBishop2, 5, 7);
-    board.set_blackMaterial(board.get_blackMaterial()+(2*bBishop1->getMaterial()));
-    board.set_whiteMaterial(board.get_whiteMaterial()+(2*wBishop1->getMaterial()));
-
-    // 5. Place Queens (File x=3)
-    chessPiece* bQueen = new queen(BLACK, 9);
-    chessPiece* wQueen = new queen(WHITE, 9);
-    board.place(bQueen, 3, 0);
-    board.place(wQueen, 3, 7);
-    board.set_blackMaterial(board.get_blackMaterial()+bQueen->getMaterial());
-    board.set_whiteMaterial(board.get_whiteMaterial()+wQueen->getMaterial());
-
-    // 6. Place Kings (File x=4)
-    chessPiece* bKing = new king(BLACK, 0);
-    chessPiece* wKing = new king(WHITE, 0);
-    board.place(bKing, 4, 0);
-    board.place(wKing, 4, 7);
+    this->setupInitialBoard();
 
     std::cout << "Starting Match: White's Turn" << std::endl;
 
@@ -1044,10 +1035,10 @@ sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
 
                     // =========================================================
                     // SURRENDER BUTTON CLICK DETECTION
-                    // (Center is 950,200. Width is 80, Height is 40)
+                    // (Center is 950,200. Size 75x75)
                     // =========================================================
-                    if (mappedMouse.x >= 910.0f && mappedMouse.x <= 990.0f && 
-                        mappedMouse.y >= 180.0f && mappedMouse.y <= 220.0f) {
+                    if (mappedMouse.x >= 912.5f && mappedMouse.x <= 987.5f && 
+                        mappedMouse.y >= 162.5f && mappedMouse.y <= 237.5f) {
                         
                         std::cout << "\n==============================================" << std::endl;
                         std::cout << " MATCH OVER: SURRENDER!" << std::endl;
@@ -1155,7 +1146,137 @@ sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
     }
 }
 
-void game::game_replay() {
+void game::setupInitialBoard() {
+    board.clearBoard();
 
+    // 1. Place Pawns across rows 1 (Black) and 6 (White)
+    for (int x = 0; x < 8; x++) {
+        chessPiece* bPawn = new pawn(BLACK, 1);
+        chessPiece* wPawn = new pawn(WHITE, 1);
+        board.place(bPawn, x, 1);
+        board.place(wPawn, x, 6);
+        board.set_blackMaterial(board.get_blackMaterial()+bPawn->getMaterial());
+        board.set_whiteMaterial(board.get_whiteMaterial()+wPawn->getMaterial());
+    }
+
+    // 2. Place Rooks
+    chessPiece* bRook1 = new rook(BLACK, 5);   chessPiece* bRook2 = new rook(BLACK, 5);
+    chessPiece* wRook1 = new rook(WHITE, 5);   chessPiece* wRook2 = new rook(WHITE, 5);
+    board.place(bRook1, 0, 0); board.place(bRook2, 7, 0);
+    board.place(wRook1, 0, 7); board.place(wRook2, 7, 7);
+    board.set_blackMaterial(board.get_blackMaterial()+(2*bRook1->getMaterial()));
+    board.set_whiteMaterial(board.get_whiteMaterial()+(2*wRook1->getMaterial()));
+
+    // 3. Place Knights
+    chessPiece* bKnight1 = new knight(BLACK, 3); chessPiece* bKnight2 = new knight(BLACK, 3);
+    chessPiece* wKnight1 = new knight(WHITE, 3); chessPiece* wKnight2 = new knight(WHITE, 3);
+    board.place(bKnight1, 1, 0); board.place(bKnight2, 6, 0);
+    board.place(wKnight1, 1, 7); board.place(wKnight2, 6, 7);
+    board.set_blackMaterial(board.get_blackMaterial()+(2*bKnight1->getMaterial()));
+    board.set_whiteMaterial(board.get_whiteMaterial()+(2*wKnight1->getMaterial()));
+
+    // 4. Place Bishops
+    chessPiece* bBishop1 = new bishop(BLACK, 3); chessPiece* bBishop2 = new bishop(BLACK, 3);
+    chessPiece* wBishop1 = new bishop(WHITE, 3); chessPiece* wBishop2 = new bishop(WHITE, 3);
+    board.place(bBishop1, 2, 0); board.place(bBishop2, 5, 0);
+    board.place(wBishop1, 2, 7); board.place(wBishop2, 5, 7);
+    board.set_blackMaterial(board.get_blackMaterial()+(2*bBishop1->getMaterial()));
+    board.set_whiteMaterial(board.get_whiteMaterial()+(2*wBishop1->getMaterial()));
+
+    // 5. Place Queens (File x=3)
+    chessPiece* bQueen = new queen(BLACK, 9);
+    chessPiece* wQueen = new queen(WHITE, 9);
+    board.place(bQueen, 3, 0);
+    board.place(wQueen, 3, 7);
+    board.set_blackMaterial(board.get_blackMaterial()+bQueen->getMaterial());
+    board.set_whiteMaterial(board.get_whiteMaterial()+wQueen->getMaterial());
+
+    // 6. Place Kings (File x=4)
+    chessPiece* bKing = new king(BLACK, 0);
+    chessPiece* wKing = new king(WHITE, 0);
+    board.place(bKing, 4, 0);
+    board.place(wKing, 4, 7);
+}
+
+#include <fstream>
+void game::game_replay(std::string filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Could not open replay file: " << filename << std::endl;
+        return;
+    }
+    file >> *this;
+    file.close();
+
+    setupInitialBoard();
+
+    sf::RenderWindow window(sf::VideoMode(1000, 1000), "Chess Match - Replay");
+    sf::View view(sf::FloatRect(0.f, 0.f, 1000.f, 1000.f));
+    window.setView(view);
+
+    size_t currentIndex = 0;
+    
+    std::cout << "Starting Replay of " << filename << " with " << moves.size() << " moves." << std::endl;
+
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+                return; 
+            }
+            if (event.type == sf::Event::Resized) {
+                float newWidth = std::max(1000.f, static_cast<float>(event.size.width));
+                float newHeight = std::max(1000.f, static_cast<float>(event.size.height));
+                window.setSize(sf::Vector2u(newWidth, newHeight));
+                float windowRatio = newWidth / newHeight;
+                float targetRatio = 1.0f;
+                float vpW = 1.0f, vpH = 1.0f, vpX = 0.0f, vpY = 0.0f;
+                if (windowRatio > targetRatio) {
+                    vpW = targetRatio / windowRatio;
+                    vpX = (1.0f - vpW) / 2.0f;
+                } else {
+                    vpH = windowRatio / targetRatio;
+                    vpY = (1.0f - vpH) / 2.0f;
+                }
+                view.setViewport(sf::FloatRect(vpX, vpY, vpW, vpH));
+                window.setView(view);
+            }
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
+                    sf::Vector2f mappedMouse = window.mapPixelToCoords(rawMouse);
+
+                    // Check bounds for "Previous Turn" (Center 950, 300, Size 75x75)
+                    if (mappedMouse.x >= 912.5f && mappedMouse.x <= 987.5f &&
+                        mappedMouse.y >= 262.5f && mappedMouse.y <= 337.5f) {
+                        if (currentIndex > 0) {
+                            currentIndex--;
+                            setupInitialBoard();
+                            for (size_t i = 0; i < currentIndex; i++) {
+                                board.applyMovement(moves[i]);
+                            }
+                            std::cout << "Reverted to move " << currentIndex << std::endl;
+                        }
+                    }
+                    
+                    // Check bounds for "Next Turn" (Center 950, 400, Size 75x75)
+                    if (mappedMouse.x >= 912.5f && mappedMouse.x <= 987.5f &&
+                        mappedMouse.y >= 362.5f && mappedMouse.y <= 437.5f) {
+                        if (currentIndex < moves.size()) {
+                            board.applyMovement(moves[currentIndex]);
+                            currentIndex++;
+                            std::cout << "Applied move " << currentIndex << " of " << moves.size() << std::endl;
+                        }
+                    }
+                }
+            }
+        }
+
+        window.clear(sf::Color::Black);
+        // Display board from WHITE's perspective as requested
+        renderer.replay_renderBoard(window, board, WHITE);
+        window.display();
+    }
 }
 
