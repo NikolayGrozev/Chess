@@ -722,31 +722,54 @@ void Renderer::configureSprite(sf::Sprite& sprite, float targetSize) {
     }
 }
 
-sf::Vector2i Renderer::mapPixelToGrid(float mouseX, float mouseY) const {
+sf::Vector2i Renderer::mapPixelToGrid(float mouseX, float mouseY, pieceColor viewColor) const {
     if (mouseX < OFFSET_X || mouseY < OFFSET_Y) return sf::Vector2i(-1, -1);
     int gridX = static_cast<int>((mouseX - OFFSET_X) / SQUARE_SIZE);
     int gridY = static_cast<int>((mouseY - OFFSET_Y) / SQUARE_SIZE);
-    if (gridX >= 0 && gridX < 8 && gridY >= 0 && gridY < 8) return sf::Vector2i(gridX, gridY);
+    
+    if (gridX >= 0 && gridX < 8 && gridY >= 0 && gridY < 8) {
+        // FLIP MOUSE TRACKING FOR BLACK
+        if (viewColor == BLACK) {
+            gridX = 7 - gridX;
+            gridY = 7 - gridY;
+        }
+        return sf::Vector2i(gridX, gridY);
+    }
     return sf::Vector2i(-1, -1);
 }
 
-void Renderer::drawGridHighlights(sf::RenderWindow& window, const std::vector<sf::Vector2i>& coordinates) const {
+void Renderer::drawGridHighlights(sf::RenderWindow& window, const std::vector<sf::Vector2i>& coordinates, pieceColor viewColor) const {
     sf::CircleShape indicator(20.0f);
     indicator.setOrigin(20.0f, 20.0f);   
     indicator.setFillColor(sf::Color(255, 0, 0, 160)); 
 
     for (const auto& coord : coordinates) {
         if (coord.x >= 0 && coord.x < 8 && coord.y >= 0 && coord.y < 8) {
-            float cX = OFFSET_X + (coord.x * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
-            float cY = OFFSET_Y + (coord.y * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
+            // INVERT HIGHLIGHT COORDINATES IF BLACK
+            int drawX = (viewColor == WHITE) ? coord.x : 7 - coord.x;
+            int drawY = (viewColor == WHITE) ? coord.y : 7 - coord.y;
+
+            float cX = OFFSET_X + (drawX * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
+            float cY = OFFSET_Y + (drawY * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
             indicator.setPosition(cX, cY);
             window.draw(indicator);
         }
     }
 }
 
-void Renderer::drawCoreChessboard(sf::RenderWindow& window, const ChessBoard& board) {
+void Renderer::drawCoreChessboard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor) {
     if (boardTexture.getNativeHandle() != 0) {
+        // ROTATE THE ENTIRE BOARD TEXTURE 180 DEGREES FOR BLACK
+        if (viewColor == BLACK) {
+            sf::FloatRect bounds = boardSprite.getLocalBounds();
+            boardSprite.setOrigin(bounds.width / 2.0f, bounds.height / 2.0f);
+            boardSprite.setPosition(ASSET_PADDING + bounds.width / 2.0f, ASSET_PADDING + bounds.height / 2.0f);
+            boardSprite.setRotation(180.0f);
+        } else {
+            boardSprite.setOrigin(0.0f, 0.0f);
+            boardSprite.setPosition(ASSET_PADDING, ASSET_PADDING);
+            boardSprite.setRotation(0.0f);
+        }
         window.draw(boardSprite);
     } else {
         sf::RectangleShape defaultBoard(sf::Vector2f(900.0f, 900.0f));
@@ -769,8 +792,12 @@ void Renderer::drawCoreChessboard(sf::RenderWindow& window, const ChessBoard& bo
                 else if (typeid(*piece) == typeid(queen))     spr = &queenSprite[cIdx];
                 else if (typeid(*piece) == typeid(king))      spr = &kingSprite[cIdx];
 
-                float cX = OFFSET_X + (x * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
-                float cY = OFFSET_Y + (y * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
+                // INVERT PIECE PLACEMENT COORDINATES IF BLACK
+                int drawX = (viewColor == WHITE) ? x : 7 - x;
+                int drawY = (viewColor == WHITE) ? y : 7 - y;
+
+                float cX = OFFSET_X + (drawX * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
+                float cY = OFFSET_Y + (drawY * SQUARE_SIZE) + (SQUARE_SIZE / 2.0f);
 
                 if (spr != nullptr && spr->getTexture() != nullptr && spr->getTexture()->getNativeHandle() != 0) {
                     spr->setPosition(cX, cY);
@@ -785,12 +812,34 @@ void Renderer::drawCoreChessboard(sf::RenderWindow& window, const ChessBoard& bo
     }
 }
 
-void Renderer::game_renderBoard(sf::RenderWindow& window, const ChessBoard& board) {
-    drawCoreChessboard(window, board);
+void Renderer::game_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor) {
+    drawCoreChessboard(window, board, viewColor);
+
+    // ==========================================
+    // DRAW SIDE UI (Fits perfectly in the X > 900 space)
+    // ==========================================
+
+    // 1. Turn Indicator (Circle)
+    sf::CircleShape turnIndicator(30.0f);
+    turnIndicator.setOrigin(30.0f, 30.0f);
+    turnIndicator.setPosition(950.0f, 100.0f); 
+    turnIndicator.setFillColor(viewColor == WHITE ? sf::Color::White : sf::Color::Black);
+    turnIndicator.setOutlineThickness(2.0f);
+    turnIndicator.setOutlineColor(sf::Color(150, 150, 150)); // Gray border so black circle doesn't vanish
+    window.draw(turnIndicator);
+
+    // 2. Surrender Button (Red Rectangle)
+    sf::RectangleShape surrenderBtn(sf::Vector2f(80.0f, 40.0f));
+    surrenderBtn.setOrigin(40.0f, 20.0f);
+    surrenderBtn.setPosition(950.0f, 200.0f);
+    surrenderBtn.setFillColor(sf::Color(200, 0, 0));
+    surrenderBtn.setOutlineThickness(2.0f);
+    surrenderBtn.setOutlineColor(sf::Color::White);
+    window.draw(surrenderBtn);
 }
 
-void Renderer::replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board) {
-    drawCoreChessboard(window, board);
+void Renderer::replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor) {
+    drawCoreChessboard(window, board, viewColor);
 }
 
 // =========================================================================
@@ -990,11 +1039,28 @@ void game::game_run() {
 
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
-                    sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
+sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
                     sf::Vector2f mappedMouse = window.mapPixelToCoords(rawMouse);
 
-                    sf::Vector2i clickedGrid = renderer.mapPixelToGrid(mappedMouse.x, mappedMouse.y);
+                    // =========================================================
+                    // SURRENDER BUTTON CLICK DETECTION
+                    // (Center is 950,200. Width is 80, Height is 40)
+                    // =========================================================
+                    if (mappedMouse.x >= 910.0f && mappedMouse.x <= 990.0f && 
+                        mappedMouse.y >= 180.0f && mappedMouse.y <= 220.0f) {
+                        
+                        std::cout << "\n==============================================" << std::endl;
+                        std::cout << " MATCH OVER: SURRENDER!" << std::endl;
+                        std::cout << " " << ((this->currentTurn == WHITE) ? "White" : "Black") << " has thrown in the towel." << std::endl;
+                        std::cout << " " << ((this->currentTurn == WHITE) ? "BLACK" : "WHITE") << " WINS THE MATCH!" << std::endl;
+                        std::cout << "==============================================" << std::endl;
+                        
+                        this->isOver = true;
+                        break; // End the game
+                    }
 
+                    // PASS THE CURRENT TURN TO THE MOUSE MAPPER
+                    sf::Vector2i clickedGrid = renderer.mapPixelToGrid(mappedMouse.x, mappedMouse.y, this->currentTurn);
                     bool clickedLegalMove = false;
                     for (const auto& move : activeHighlights) {
                         if (clickedGrid.x == move.x && clickedGrid.y == move.y) {
@@ -1081,8 +1147,9 @@ void game::game_run() {
 
         window.clear(sf::Color::Black);
         
-        renderer.game_renderBoard(window, board); 
-        renderer.drawGridHighlights(window, activeHighlights);
+        // PASS CURRENT TURN TO RENDERERS
+        renderer.game_renderBoard(window, board, this->currentTurn); 
+        renderer.drawGridHighlights(window, activeHighlights, this->currentTurn);
         
         window.display();
     }

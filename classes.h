@@ -160,18 +160,18 @@ private:
     const float PIECE_SIZE    = 75.0f;  
 
     void configureSprite(sf::Sprite& sprite, float targetSize);
-    void drawCoreChessboard(sf::RenderWindow& window, const ChessBoard& board);
+    void drawCoreChessboard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor);
 
 public: 
     Renderer();
     ~Renderer();
     
-    sf::Vector2i mapPixelToGrid(float mouseX, float mouseY) const;
-    void drawGridHighlights(sf::RenderWindow& window, const std::vector<sf::Vector2i>& coordinates) const;
+    sf::Vector2i mapPixelToGrid(float mouseX, float mouseY, pieceColor viewColor) const;
+    void drawGridHighlights(sf::RenderWindow& window, const std::vector<sf::Vector2i>& coordinates, pieceColor viewColor) const;
     
     // Core state-driven rendering methods
-    void game_renderBoard(sf::RenderWindow& window, const ChessBoard& board) ;
-    void replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board);
+    void game_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor);
+    void replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor);
 };
 
 class game {
