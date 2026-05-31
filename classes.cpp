@@ -750,6 +750,15 @@ Renderer::Renderer() {
     // Manually scale to width 80 without distorting (80/300 = 0.266f)
     exitSprite.setOrigin(150.0f, 68.5f);
     exitSprite.setScale(80.0f / 300.0f, 80.0f / 300.0f);
+
+    if (!slotTex.loadFromFile("assets/slot.png")) {
+        std::cerr << "Warning: assets/slot.png missing!\n";
+    }
+    slotSprite.setTexture(slotTex);
+
+    if (!sidebarFont.loadFromFile("assets/ArialCE.ttf")) {
+        std::cerr << "Warning: assets/ArialCE.ttf missing!\n";
+    }
 }
 
 Renderer::~Renderer() {}
@@ -873,6 +882,9 @@ void Renderer::game_renderBoard(sf::RenderWindow& window, const ChessBoard& boar
         surrenderSprite.setPosition(950.0f, 200.0f);
         window.draw(surrenderSprite);
     }
+
+    // 3. Material Display
+    drawMaterialDisplay(window, board);
 }
 
 void Renderer::drawExitButton(sf::RenderWindow& window) {
@@ -880,6 +892,47 @@ void Renderer::drawExitButton(sf::RenderWindow& window) {
         exitSprite.setPosition(950.0f, 300.0f);
         window.draw(exitSprite);
     }
+}
+
+void Renderer::drawMaterialDisplay(sf::RenderWindow& window, const ChessBoard& board) {
+    if (slotTex.getNativeHandle() == 0) return;
+
+    // Scale the 450x100 slot to fit the sidebar (90px wide -> scale = 90/450 = 0.2)
+    float scale = 90.0f / 450.0f;
+    float slotW = 450.0f * scale;  // 90px
+    float slotH = 100.0f * scale;  // 20px
+
+    // White material slot - positioned at the bottom-left of the sidebar
+    float whiteX = 905.0f;
+    float whiteY = 500.0f;
+    slotSprite.setScale(scale, scale);
+    slotSprite.setPosition(whiteX, whiteY);
+    window.draw(slotSprite);
+
+    sf::Text whiteText;
+    whiteText.setFont(sidebarFont);
+    whiteText.setString("W: " + std::to_string(board.get_whiteMaterial()));
+    whiteText.setCharacterSize(12);
+    whiteText.setFillColor(sf::Color::Black);
+    sf::FloatRect wBounds = whiteText.getLocalBounds();
+    whiteText.setOrigin(wBounds.left + wBounds.width / 2.0f, wBounds.top + wBounds.height / 2.0f);
+    whiteText.setPosition(whiteX + slotW / 2.0f, whiteY + slotH / 2.0f);
+    window.draw(whiteText);
+
+    // Black material slot - directly below white
+    float blackY = whiteY + slotH + 5.0f;
+    slotSprite.setPosition(whiteX, blackY);
+    window.draw(slotSprite);
+
+    sf::Text blackText;
+    blackText.setFont(sidebarFont);
+    blackText.setString("B: " + std::to_string(board.get_blackMaterial()));
+    blackText.setCharacterSize(12);
+    blackText.setFillColor(sf::Color::Black);
+    sf::FloatRect bBounds = blackText.getLocalBounds();
+    blackText.setOrigin(bBounds.left + bBounds.width / 2.0f, bBounds.top + bBounds.height / 2.0f);
+    blackText.setPosition(whiteX + slotW / 2.0f, blackY + slotH / 2.0f);
+    window.draw(blackText);
 }
 
 void Renderer::replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor) {
@@ -894,6 +947,15 @@ void Renderer::replay_renderBoard(sf::RenderWindow& window, const ChessBoard& bo
         nextTurnSprite.setPosition(950.0f, 400.0f);
         window.draw(nextTurnSprite);
     }
+
+    // Exit Button
+    if (exitTex.getNativeHandle() != 0) {
+        exitSprite.setPosition(950.0f, 200.0f);
+        window.draw(exitSprite);
+    }
+
+    // Material Display
+    drawMaterialDisplay(window, board);
 }
 
 // =========================================================================
@@ -1292,6 +1354,12 @@ void game::game_replay(std::string filename, sf::RenderWindow& window) {
                             currentIndex++;
                             std::cout << "Applied move " << currentIndex << " of " << moves.size() << std::endl;
                         }
+                    }
+
+                    // Check bounds for "Exit" button (Center 950, 200. Scaled ~80x36.5)
+                    if (mappedMouse.x >= 910.0f && mappedMouse.x <= 990.0f &&
+                        mappedMouse.y >= 181.7f && mappedMouse.y <= 218.3f) {
+                        return; // Drop back to the main menu
                     }
                 }
             }

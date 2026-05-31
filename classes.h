@@ -150,8 +150,9 @@ private:
     sf::Texture pawnTex[2], knightTex[2], bishopTex[2], rookTex[2], queenTex[2], kingTex[2];
     sf::Sprite boardSprite;
     sf::Sprite pawnSprite[2], knightSprite[2], bishopSprite[2], rookSprite[2], queenSprite[2], kingSprite[2];
-    sf::Texture nextTurnTex, prevTurnTex, surrenderTex, exitTex;
-    sf::Sprite nextTurnSprite, prevTurnSprite, surrenderSprite, exitSprite;
+    sf::Texture nextTurnTex, prevTurnTex, surrenderTex, exitTex, slotTex;
+    sf::Sprite nextTurnSprite, prevTurnSprite, surrenderSprite, exitSprite, slotSprite;
+    sf::Font sidebarFont;
     sf::CircleShape fallbackPlaceholder;
 
     // Board Layout Metrics
@@ -176,6 +177,7 @@ public:
     void game_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor);
     void replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor);
     void drawExitButton(sf::RenderWindow& window);
+    void drawMaterialDisplay(sf::RenderWindow& window, const ChessBoard& board);
 };
 
 class game {
