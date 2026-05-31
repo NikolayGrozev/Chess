@@ -8,39 +8,62 @@
 #include <stdexcept>
 
 int main() {
-    std::cout << "============== Launching Chess Engine Match ==============" << std::endl;
-    
-    // 1. Allocate your structural game orchestration framework context
-    game chessMatch;
+    std::cout << "============== Launching Chess Engine Menu ==============" << std::endl;
 
-    // 2. Hand control fully over to your active gameplay loop thread 
-    // This will open a 1000x1000 SFML window, configure default board assets,
-    // and track player alternating clicks safely until a draw or window termination.
-    // Testing replay system with a known save file
-    chessMatch.game_replay("saves/game_2026-05-31_13-54-25.txt");
-    // chessMatch.game_run();
+    sf::RenderWindow window(sf::VideoMode(1000, 1000), "Chess Engine");
 
-    std::cout << "============== Match Controller Terminated ==============" << std::endl;
+    sf::Texture playTex, replayTex, exitTex;
+    if (!playTex.loadFromFile("assets/play.png")) std::cerr << "Missing assets/play.png\n";
+    if (!replayTex.loadFromFile("assets/replay.png")) std::cerr << "Missing assets/replay.png\n";
+    if (!exitTex.loadFromFile("assets/exit.png")) std::cerr << "Missing assets/exit.png\n";
 
-    /*
-    // 1. Get current system time point
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    sf::Sprite playSprite(playTex), replaySprite(replayTex), exitSprite(exitTex);
 
-    // 2. Format it into a structured year-month-day_hour-minute-second string
-    std::stringstream ss;
-    ss << "saves/game_" << std::put_time(std::localtime(&now_time), "%Y-%m-%d_%H-%M-%S") << ".txt";
-    std::string uniqueFilename = ss.str();
+    // The pngs are 300x137. Center them horizontally (X = 500 - 150 = 350).
+    playSprite.setPosition(350.0f, 250.0f);
+    replaySprite.setPosition(350.0f, 450.0f);
+    exitSprite.setPosition(350.0f, 650.0f);
 
-    // 3. Save it via your streamlined operator
-    std::ofstream file(uniqueFilename, std::ios::out | std::ios::trunc);
-    if (!file.is_open()) {
-        std::cerr<<"Could not open file";
-        exit(1);
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left) {
+                sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
+                sf::Vector2f mappedMouse = window.mapPixelToCoords(rawMouse);
+
+                // Play Button Bounds (350 to 650 X, 250 to 387 Y)
+                if (mappedMouse.x >= 350.0f && mappedMouse.x <= 650.0f &&
+                    mappedMouse.y >= 250.0f && mappedMouse.y <= 387.0f) {
+                    game chessMatch;
+                    chessMatch.game_run(window);
+                    
+                    // Note: Auto-saving is currently disabled during menu testing
+                }
+                
+                // Replay Button Bounds (350 to 650 X, 450 to 587 Y)
+                if (mappedMouse.x >= 350.0f && mappedMouse.x <= 650.0f &&
+                    mappedMouse.y >= 450.0f && mappedMouse.y <= 587.0f) {
+                    std::cout << "Replay Menu Placeholder Clicked!" << std::endl;
+                }
+                
+                // Exit Button Bounds (350 to 650 X, 650 to 787 Y)
+                if (mappedMouse.x >= 350.0f && mappedMouse.x <= 650.0f &&
+                    mappedMouse.y >= 650.0f && mappedMouse.y <= 787.0f) {
+                    window.close();
+                }
+            }
+        }
+
+        window.clear(sf::Color(30, 30, 30));
+        window.draw(playSprite);
+        window.draw(replaySprite);
+        window.draw(exitSprite);
+        window.display();
     }
-    file << chessMatch;
-    file.close();
-    std::cout << "Match safely auto-logged to: " << uniqueFilename << std::endl;
-    */
+
+    std::cout << "============== Engine Terminated ==============" << std::endl;
     return 0;
 }

@@ -150,8 +150,8 @@ private:
     sf::Texture pawnTex[2], knightTex[2], bishopTex[2], rookTex[2], queenTex[2], kingTex[2];
     sf::Sprite boardSprite;
     sf::Sprite pawnSprite[2], knightSprite[2], bishopSprite[2], rookSprite[2], queenSprite[2], kingSprite[2];
-    sf::Texture nextTurnTex, prevTurnTex, surrenderTex;
-    sf::Sprite nextTurnSprite, prevTurnSprite, surrenderSprite;
+    sf::Texture nextTurnTex, prevTurnTex, surrenderTex, exitTex;
+    sf::Sprite nextTurnSprite, prevTurnSprite, surrenderSprite, exitSprite;
     sf::CircleShape fallbackPlaceholder;
 
     // Board Layout Metrics
@@ -175,6 +175,7 @@ public:
     // Core state-driven rendering methods
     void game_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor);
     void replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor);
+    void drawExitButton(sf::RenderWindow& window);
 };
 
 class game {
@@ -190,8 +191,8 @@ public:
     ~game();
     bool insufficientMaterial(pieceColor color) const;
     void setupInitialBoard();
-    void game_replay(std::string filename);
-    void game_run();
+    void game_replay(std::string filename, sf::RenderWindow& window);
+    void game_run(sf::RenderWindow& window);
     std::vector<Movement> get_Moves();
 
     friend std::ostream& operator<<(std::ostream& os, const game& g);

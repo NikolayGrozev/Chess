@@ -742,6 +742,14 @@ Renderer::Renderer() {
     }
     surrenderSprite.setTexture(surrenderTex);
     configureSprite(surrenderSprite, 75.0f);
+
+    if (!exitTex.loadFromFile("assets/exit.png")) {
+        std::cerr << "Warning: assets/exit.png missing!\n";
+    }
+    exitSprite.setTexture(exitTex);
+    // Manually scale to width 80 without distorting (80/300 = 0.266f)
+    exitSprite.setOrigin(150.0f, 68.5f);
+    exitSprite.setScale(80.0f / 300.0f, 80.0f / 300.0f);
 }
 
 Renderer::~Renderer() {}
@@ -867,6 +875,13 @@ void Renderer::game_renderBoard(sf::RenderWindow& window, const ChessBoard& boar
     }
 }
 
+void Renderer::drawExitButton(sf::RenderWindow& window) {
+    if (exitTex.getNativeHandle() != 0) {
+        exitSprite.setPosition(950.0f, 300.0f);
+        window.draw(exitSprite);
+    }
+}
+
 void Renderer::replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor) {
     drawCoreChessboard(window, board, viewColor);
     
@@ -955,9 +970,7 @@ std::istream& operator>>(std::istream& is, game& g) {
     return is;
 }
 
-void game::game_run() {
-    sf::RenderWindow window(sf::VideoMode(1000, 1000), "Chess Match - Active Gameplay");
-    
+void game::game_run(sf::RenderWindow& window) {
     sf::View view(sf::FloatRect(0.f, 0.f, 1000.f, 1000.f));
     window.setView(view);
 
@@ -975,12 +988,12 @@ void game::game_run() {
 
     std::cout << "Starting Match: White's Turn" << std::endl;
 
-    while (window.isOpen() && !this->isOver) {
+    while (window.isOpen()) {
 
         // =====================================================================
         // ACTIVE TURN STATE VALIDATION SCANNER (CHECKMATE / STALEMATE)
         // =====================================================================
-        if (board.hasNoValidMoves(this->currentTurn)) {
+        if (!this->isOver && board.hasNoValidMoves(this->currentTurn)) {
             MutableBoardMatrix currentMatrix = board.getBoard();
             
             if (board.isInCheck(this->currentTurn, currentMatrix)) {
@@ -998,7 +1011,6 @@ void game::game_run() {
             }
             
             this->isOver = true;
-            break; // Drop out of rendering frames immediately
         }
 
         sf::Event event;
@@ -1033,6 +1045,15 @@ void game::game_run() {
 sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
                     sf::Vector2f mappedMouse = window.mapPixelToCoords(rawMouse);
 
+                    if (this->isOver) {
+                        // Exit button bounds in sidebar (Center is 950,300. Scaled Size 80x36.5)
+                        if (mappedMouse.x >= 910.0f && mappedMouse.x <= 990.0f && 
+                            mappedMouse.y >= 281.7f && mappedMouse.y <= 318.3f) {
+                            return; // Drop out to the main menu
+                        }
+                        continue; // Ignore piece clicks if game is over
+                    }
+
                     // =========================================================
                     // SURRENDER BUTTON CLICK DETECTION
                     // (Center is 950,200. Size 75x75)
@@ -1047,7 +1068,7 @@ sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
                         std::cout << "==============================================" << std::endl;
                         
                         this->isOver = true;
-                        break; // End the game
+                        continue; // Stay in the loop to show the exit button
                     }
 
                     // PASS THE CURRENT TURN TO THE MOUSE MAPPER
@@ -1142,6 +1163,10 @@ sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
         renderer.game_renderBoard(window, board, this->currentTurn); 
         renderer.drawGridHighlights(window, activeHighlights, this->currentTurn);
         
+        if (this->isOver) {
+            renderer.drawExitButton(window);
+        }
+
         window.display();
     }
 }
@@ -1199,7 +1224,7 @@ void game::setupInitialBoard() {
 }
 
 #include <fstream>
-void game::game_replay(std::string filename) {
+void game::game_replay(std::string filename, sf::RenderWindow& window) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Could not open replay file: " << filename << std::endl;
@@ -1210,7 +1235,6 @@ void game::game_replay(std::string filename) {
 
     setupInitialBoard();
 
-    sf::RenderWindow window(sf::VideoMode(1000, 1000), "Chess Match - Replay");
     sf::View view(sf::FloatRect(0.f, 0.f, 1000.f, 1000.f));
     window.setView(view);
 
