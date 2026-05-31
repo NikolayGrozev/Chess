@@ -470,6 +470,8 @@ Position* ChessBoard::getStrictlyLegalMoves(Position fromPos) const {
     MutableBoardMatrix baseMatrix = this->getBoard();
     Position* pseudoMoves = movingPiece->get_ValidMoves(baseMatrix, fromPos);
 
+    
+
     // =========================================================================
     // EN PASSANT INJECTION (Add the coordinate if geometrically valid)
     // =========================================================================
@@ -481,6 +483,51 @@ Position* ChessBoard::getStrictlyLegalMoves(Position fromPos) const {
         // If the target is diagonally forward-left or forward-right
         if (enPassantTarget.get_y() == currY + dir && std::abs(enPassantTarget.get_x() - currX) == 1) {
             pseudoMoves = addToArr(enPassantTarget.get_x(), enPassantTarget.get_y(), pseudoMoves);
+        }
+    }
+
+    // =========================================================================
+    // CASTLING INJECTION (Rule 1, 2, and 3)
+    // =========================================================================
+    const king* kPiece = dynamic_cast<const king*>(movingPiece);
+    if (kPiece != nullptr && !kPiece->get_hasMoved()) {
+        pieceColor myColor = kPiece->get_PieceColor();
+        int y = fromPos.get_y(); // Y=7 for White, Y=0 for Black
+        
+        // Rule: You cannot castle out of check!
+        if (!this->isInCheck(myColor, baseMatrix)) {
+            
+            // KINGSIDE CASTLE (Right side)
+            const rook* rightRook = dynamic_cast<const rook*>(this->board[y][7]);
+            if (rightRook != nullptr && !rightRook->get_hasMoved()) {
+                // Are the two tiles between them empty?
+                if (this->board[y][5] == nullptr && this->board[y][6] == nullptr) {
+                    
+                    // Simulate King stepping to x=5 and x=6 to check for threats
+                    MutableBoardMatrix sim1 = baseMatrix; sim1[y][5] = sim1[y][4]; sim1[y][4] = nullptr;
+                    MutableBoardMatrix sim2 = baseMatrix; sim2[y][6] = sim2[y][4]; sim2[y][4] = nullptr;
+                    
+                    if (!this->isInCheck(myColor, sim1) && !this->isInCheck(myColor, sim2)) {
+                        pseudoMoves = addToArr(6, y, pseudoMoves); // Add Kingside Castle destination!
+                    }
+                }
+            }
+
+            // QUEENSIDE CASTLE (Left side)
+            const rook* leftRook = dynamic_cast<const rook*>(this->board[y][0]);
+            if (leftRook != nullptr && !leftRook->get_hasMoved()) {
+                // Are the three tiles between them empty?
+                if (this->board[y][1] == nullptr && this->board[y][2] == nullptr && this->board[y][3] == nullptr) {
+                    
+                    // Simulate King stepping to x=3 and x=2 (Tile x=1 does not need check-validation, only emptiness)
+                    MutableBoardMatrix sim1 = baseMatrix; sim1[y][3] = sim1[y][4]; sim1[y][4] = nullptr;
+                    MutableBoardMatrix sim2 = baseMatrix; sim2[y][2] = sim2[y][4]; sim2[y][4] = nullptr;
+                    
+                    if (!this->isInCheck(myColor, sim1) && !this->isInCheck(myColor, sim2)) {
+                        pseudoMoves = addToArr(2, y, pseudoMoves); // Add Queenside Castle destination!
+                    }
+                }
+            }
         }
     }
 
@@ -556,6 +603,25 @@ void ChessBoard::applyMovement(Movement m) {
 
     chessPiece* movingPiece = this->board[fromY][fromX];
     if (movingPiece == nullptr) throw std::invalid_argument("No piece found at coordinates.");
+
+    // =========================================================================
+    // CASTLING EXECUTION (Move the Rook!)
+    // =========================================================================
+    if (dynamic_cast<king*>(movingPiece) != nullptr && std::abs(toX - fromX) == 2) {
+        if (toX > fromX) { 
+            // Kingside: Move Rook from x=7 to x=5
+            chessPiece* rook = this->board[fromY][7];
+            this->board[fromY][5] = rook;
+            this->board[fromY][7] = nullptr;
+            rook->set_hasMoved(true);
+        } else { 
+            // Queenside: Move Rook from x=0 to x=3
+            chessPiece* rook = this->board[fromY][0];
+            this->board[fromY][3] = rook;
+            this->board[fromY][0] = nullptr;
+            rook->set_hasMoved(true);
+        }
+    }
 
     // EN PASSANT CAPTURE DELETION
     if (dynamic_cast<pawn*>(movingPiece) != nullptr && toX == enPassantTarget.get_x() && toY == enPassantTarget.get_y()) {
