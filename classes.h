@@ -47,19 +47,21 @@ using MutableBoardMatrix = std::array<std::array<chessPiece*, 8>, 8>;
 class chessPiece {
 private:
     pieceColor color;
+    int material;
 public:
-    chessPiece(pieceColor c);
+    chessPiece(pieceColor c, int material);
     virtual ~chessPiece();
     virtual Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const = 0;
     virtual void set_hasMoved(bool hm);
     pieceColor get_PieceColor() const;
+    int getMaterial() const;
 };
 
 class pawn : public chessPiece {
 private:
     bool hasMoved;
 public:
-    pawn(pieceColor c);
+    pawn(pieceColor c, int material);
     ~pawn();
     Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
     bool get_hasMoved() const;
@@ -68,7 +70,7 @@ public:
 
 class knight : public chessPiece {
 public:
-    knight(pieceColor c);
+    knight(pieceColor c, int material);
     ~knight();
     Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
 };
@@ -77,7 +79,7 @@ class bishop : public chessPiece {
 private:
     void getDiagonalMoves(const MutableBoardMatrix& board, const Position p, const int x_offset, const int y_offset, Position*& moves) const;
 public:
-    bishop(pieceColor c);
+    bishop(pieceColor c, int material);
     ~bishop();
     Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
 };
@@ -87,7 +89,7 @@ private:
     bool hasMoved;
     void getLaneMoves(const MutableBoardMatrix& board, const Position p, const int x_offset, const int y_offset, Position*& moves) const;
 public:
-    rook(pieceColor c);
+    rook(pieceColor c, int material);
     ~rook();
     Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
     bool get_hasMoved() const;
@@ -96,7 +98,7 @@ public:
 
 class queen : public chessPiece {
 public:
-    queen(pieceColor c);
+    queen(pieceColor c, int material);
     ~queen();
     Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
 };
@@ -105,7 +107,7 @@ class king : public chessPiece {
 private:
     bool hasMoved;
 public:
-    king(pieceColor c);
+    king(pieceColor c, int material);
     ~king();
     Position* get_ValidMoves(const MutableBoardMatrix& board, const Position p) const override;
     bool get_hasMoved() const;
@@ -117,11 +119,16 @@ private:
     MutableBoardMatrix board;
     int blackMaterial;
     int whiteMaterial;
+    Position enPassantTarget;
 public:
     ChessBoard();
     ~ChessBoard();
     
     MutableBoardMatrix getBoard() const;
+
+    Position getEnPassantTarget() const;
+    void setEnPassantTarget(Position p);
+    void clearEnPassantTarget();
 
     bool isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const;
     Position* getStrictlyLegalMoves(Position fromPos) const;
@@ -132,6 +139,8 @@ public:
     void place(chessPiece*& piece, int x, int y);
     int get_whiteMaterial() const;
     int get_blackMaterial() const;
+    void set_whiteMaterial(int m);
+    void set_blackMaterial(int m);
 };
 
 class Renderer {
@@ -182,7 +191,7 @@ public:
     std::vector<Movement> get_Moves();
 
     friend std::ostream& operator<<(std::ostream& os, const game& g);
-    friend std::istream& operator>>(std::istream& in, const game g);
+    friend std::istream& operator>>(std::istream& in, game& g);
 };
 
 #endif // CLASSES_H

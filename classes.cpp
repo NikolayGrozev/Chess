@@ -68,7 +68,7 @@ Position Movement::get_to() const {
     return to;
 }
 
-chessPiece::chessPiece(pieceColor c) : color(c) {}
+chessPiece::chessPiece(pieceColor c, int material) : color(c), material(material) {}
 
 chessPiece::~chessPiece() {}
 
@@ -80,7 +80,11 @@ pieceColor chessPiece::get_PieceColor() const {
     return this->color;
 }
 
-pawn::pawn(pieceColor c) : chessPiece(c), hasMoved(0) {}
+int chessPiece::getMaterial() const{
+    return material;
+};
+
+pawn::pawn(pieceColor c, int material) : chessPiece(c, material), hasMoved(0) {}
 
 pawn::~pawn() {}
 
@@ -133,7 +137,7 @@ void pawn::set_hasMoved(bool hm) {
     this->hasMoved = hm;
 }
 
-knight::knight(pieceColor c) : chessPiece(c) {}
+knight::knight(pieceColor c, int material) : chessPiece(c, material) {}
 
 knight::~knight() {}
 
@@ -159,7 +163,7 @@ Position * knight::get_ValidMoves(const MutableBoardMatrix& board, const Positio
     return validMoves;
 }
 
-bishop::bishop(pieceColor c) : chessPiece(c) {}
+bishop::bishop(pieceColor c, int material) : chessPiece(c, material) {}
 
 bishop::~bishop() {}
 
@@ -207,7 +211,7 @@ Position * bishop::get_ValidMoves(const MutableBoardMatrix& board, const Positio
     return validMoves;
 }
 
-rook::rook(pieceColor c) : chessPiece(c), hasMoved(0) {}
+rook::rook(pieceColor c, int material) : chessPiece(c, material), hasMoved(0) {}
 
 rook::~rook() {}
 
@@ -264,15 +268,15 @@ void rook::set_hasMoved(bool hm) {
     this->hasMoved = hm;
 }
 
-queen::queen(pieceColor c) : chessPiece(c) {}
+queen::queen(pieceColor c, int material) : chessPiece(c, material) {}
 
 queen::~queen() {}
 
 Position * queen::get_ValidMoves(const MutableBoardMatrix& board, const Position p) const {
     Position * validMoves = new Position[1];
 
-    rook r(this->get_PieceColor());
-    bishop b(this->get_PieceColor());
+    rook r(this->get_PieceColor(), 5);
+    bishop b(this->get_PieceColor(), 3);
 
     Position * rookMoves = r.get_ValidMoves(board, p);
     Position * bishopMoves = b.get_ValidMoves(board, p);
@@ -290,7 +294,7 @@ Position * queen::get_ValidMoves(const MutableBoardMatrix& board, const Position
     return validMoves;
 }
 
-king::king(pieceColor c) : chessPiece(c), hasMoved(0) {}
+king::king(pieceColor c, int material) : chessPiece(c, 0), hasMoved(0) {}
 
 king::~king() {}
 
@@ -325,7 +329,7 @@ void king::set_hasMoved(bool hm) {
     this->hasMoved = hm;
 }
 
-ChessBoard::ChessBoard() {
+ChessBoard::ChessBoard() : enPassantTarget() { // Initializes to INT_MAX by default
     for(int i = 0; i < 8; i++){
         for(int j = 0; j < 8; j++){
             this->board[i][j] = nullptr;
@@ -334,6 +338,10 @@ ChessBoard::ChessBoard() {
     blackMaterial = 0;
     whiteMaterial = 0;
 }
+
+Position ChessBoard::getEnPassantTarget() const { return enPassantTarget; }
+void ChessBoard::setEnPassantTarget(Position p) { enPassantTarget = p; }
+void ChessBoard::clearEnPassantTarget() { enPassantTarget = Position(); }
 
 ChessBoard::~ChessBoard() {
     for(int i = 0; i < 8; i++){
@@ -373,7 +381,7 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     Position kingPos(kingX, kingY);
     pieceColor enemyColor = (p == WHITE) ? BLACK : WHITE;
 
-    rook dummyRook(p);
+    rook dummyRook(p, 5);
     Position* rookMoves = dummyRook.get_ValidMoves(matrix, kingPos);
     for (int i = 0; rookMoves[i].get_x() != INT_MAX && rookMoves[i].get_y() != INT_MAX; i++) {
         int tx = rookMoves[i].get_x();
@@ -388,7 +396,7 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     }
     delete[] rookMoves;
 
-    bishop dummyBishop(p);
+    bishop dummyBishop(p, 3);
     Position* bishopMoves = dummyBishop.get_ValidMoves(matrix, kingPos);
     for (int i = 0; bishopMoves[i].get_x() != INT_MAX && bishopMoves[i].get_y() != INT_MAX; i++) {
         int tx = bishopMoves[i].get_x();
@@ -403,7 +411,7 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     }
     delete[] bishopMoves;
 
-    knight dummyKnight(p);
+    knight dummyKnight(p, 3);
     Position* knightMoves = dummyKnight.get_ValidMoves(matrix, kingPos);
     for (int i = 0; knightMoves[i].get_x() != INT_MAX && knightMoves[i].get_y() != INT_MAX; i++) {
         int tx = knightMoves[i].get_x();
@@ -418,7 +426,7 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     }
     delete[] knightMoves;
 
-    pawn dummyPawn(p);
+    pawn dummyPawn(p, 1);
     Position* pawnMoves = dummyPawn.get_ValidMoves(matrix, kingPos);
     for (int i = 0; pawnMoves[i].get_x() != INT_MAX && pawnMoves[i].get_y() != INT_MAX; i++) {
         int tx = pawnMoves[i].get_x();
@@ -433,7 +441,7 @@ bool ChessBoard::isInCheck(pieceColor p, const MutableBoardMatrix& matrix) const
     }
     delete[] pawnMoves;
 
-    king dummyKing(p);
+    king dummyKing(p, 0);
     Position* kingMoves = dummyKing.get_ValidMoves(matrix, kingPos);
     for (int i = 0; kingMoves[i].get_x() != INT_MAX && kingMoves[i].get_y() != INT_MAX; i++) {
         int tx = kingMoves[i].get_x();
@@ -462,6 +470,20 @@ Position* ChessBoard::getStrictlyLegalMoves(Position fromPos) const {
     MutableBoardMatrix baseMatrix = this->getBoard();
     Position* pseudoMoves = movingPiece->get_ValidMoves(baseMatrix, fromPos);
 
+    // =========================================================================
+    // EN PASSANT INJECTION (Add the coordinate if geometrically valid)
+    // =========================================================================
+    if (dynamic_cast<const pawn*>(movingPiece) != nullptr && enPassantTarget.get_x() != INT_MAX) {
+        int currX = fromPos.get_x();
+        int currY = fromPos.get_y();
+        int dir = (movingPiece->get_PieceColor() == WHITE) ? -1 : 1;
+        
+        // If the target is diagonally forward-left or forward-right
+        if (enPassantTarget.get_y() == currY + dir && std::abs(enPassantTarget.get_x() - currX) == 1) {
+            pseudoMoves = addToArr(enPassantTarget.get_x(), enPassantTarget.get_y(), pseudoMoves);
+        }
+    }
+
     int pseudoCount = 0;
     while (pseudoMoves[pseudoCount].get_x() != INT_MAX) {
         pseudoCount++;
@@ -479,6 +501,13 @@ Position* ChessBoard::getStrictlyLegalMoves(Position fromPos) const {
         
         simMatrix[toY][toX] = simMatrix[fromPos.get_y()][fromPos.get_x()];
         simMatrix[fromPos.get_y()][fromPos.get_x()] = nullptr;
+
+        // =========================================================================
+        // EN PASSANT SIMULATION FIX (Remove the phantom enemy piece)
+        // =========================================================================
+        if (dynamic_cast<const pawn*>(movingPiece) != nullptr && toX == enPassantTarget.get_x() && toY == enPassantTarget.get_y()) {
+            simMatrix[fromPos.get_y()][toX] = nullptr; 
+        }
 
         if (!this->isInCheck(myColor, simMatrix)) {
             safeMoves.push_back(Position(toX, toY));
@@ -526,20 +555,33 @@ void ChessBoard::applyMovement(Movement m) {
     int toY   = m.get_to().get_y();
 
     chessPiece* movingPiece = this->board[fromY][fromX];
+    if (movingPiece == nullptr) throw std::invalid_argument("No piece found at coordinates.");
 
-    if (movingPiece == nullptr) {
-        throw std::invalid_argument("Cannot apply movement: No piece found at the starting coordinates.");
+    // EN PASSANT CAPTURE DELETION
+    if (dynamic_cast<pawn*>(movingPiece) != nullptr && toX == enPassantTarget.get_x() && toY == enPassantTarget.get_y()) {
+        chessPiece* epVictim = this->board[fromY][toX]; 
+        if (epVictim != nullptr) {
+            // Deduct Material
+            if (epVictim->get_PieceColor() == WHITE) this->whiteMaterial -= epVictim->getMaterial();
+            else this->blackMaterial -= epVictim->getMaterial();
+
+            delete epVictim;
+            this->board[fromY][toX] = nullptr;
+        }
     }
 
+    // STANDARD CAPTURE DELETION
     chessPiece* targetPiece = this->board[toY][toX];
-
     if (targetPiece != nullptr) {
+        // Deduct Material
+        if (targetPiece->get_PieceColor() == WHITE) this->whiteMaterial -= targetPiece->getMaterial();
+        else this->blackMaterial -= targetPiece->getMaterial();
+
         delete targetPiece; 
     }
 
     this->board[toY][toX] = movingPiece;
     this->board[fromY][fromX] = nullptr;
-
     movingPiece->set_hasMoved(true);
 }
 
@@ -561,6 +603,13 @@ int ChessBoard::get_whiteMaterial() const {
 int ChessBoard::get_blackMaterial() const {
     return blackMaterial;
 }
+
+void ChessBoard:: set_whiteMaterial(int m){
+    this->whiteMaterial = m;
+};
+void ChessBoard:: set_blackMaterial(int m){
+    this->blackMaterial = m;
+};
 
 // =========================================================================
 // RENDERER IMPLEMENTATION
@@ -721,7 +770,7 @@ vector<Movement> game::get_Moves() {
     return this->moves;
 }
 
-std::ostream& operator<<(std::ostream& os, const game& g) {
+std::ostream& operator<<(std::ostream& os, const game& g){
     for (const auto& move : g.moves) {
         os << move.get_from().get_x() << "," << move.get_from().get_y() 
            << "->" 
@@ -730,7 +779,7 @@ std::ostream& operator<<(std::ostream& os, const game& g) {
     }
     return os;
 }
-std::istream& operator>>(std::istream& is, game g) {
+std::istream& operator>>(std::istream& is, game& g) {
     g.moves.clear();
 
     std::string line;
@@ -770,39 +819,51 @@ void game::game_run() {
     // =========================================================================
     // 1. Place Pawns across rows 1 (Black) and 6 (White)
     for (int x = 0; x < 8; x++) {
-        chessPiece* bPawn = new pawn(BLACK);
-        chessPiece* wPawn = new pawn(WHITE);
+        chessPiece* bPawn = new pawn(BLACK, 1);
+        chessPiece* wPawn = new pawn(WHITE, 1);
         board.place(bPawn, x, 1);
         board.place(wPawn, x, 6);
+        board.set_blackMaterial(board.get_blackMaterial()+bPawn->getMaterial());
+        board.set_whiteMaterial(board.get_whiteMaterial()+wPawn->getMaterial());
+
     }
 
     // 2. Place Rooks
-    chessPiece* bRook1 = new rook(BLACK);   chessPiece* bRook2 = new rook(BLACK);
-    chessPiece* wRook1 = new rook(WHITE);   chessPiece* wRook2 = new rook(WHITE);
+    chessPiece* bRook1 = new rook(BLACK, 5);   chessPiece* bRook2 = new rook(BLACK, 5);
+    chessPiece* wRook1 = new rook(WHITE, 5);   chessPiece* wRook2 = new rook(WHITE, 5);
     board.place(bRook1, 0, 0); board.place(bRook2, 7, 0);
     board.place(wRook1, 0, 7); board.place(wRook2, 7, 7);
+    board.set_blackMaterial(board.get_blackMaterial()+(2*bRook1->getMaterial()));
+    board.set_whiteMaterial(board.get_whiteMaterial()+(2*wRook1->getMaterial()));
 
     // 3. Place Knights
-    chessPiece* bKnight1 = new knight(BLACK); chessPiece* bKnight2 = new knight(BLACK);
-    chessPiece* wKnight1 = new knight(WHITE); chessPiece* wKnight2 = new knight(WHITE);
+    chessPiece* bKnight1 = new knight(BLACK, 3); chessPiece* bKnight2 = new knight(BLACK, 3);
+    chessPiece* wKnight1 = new knight(WHITE, 3); chessPiece* wKnight2 = new knight(WHITE, 3);
     board.place(bKnight1, 1, 0); board.place(bKnight2, 6, 0);
     board.place(wKnight1, 1, 7); board.place(wKnight2, 6, 7);
 
+    board.set_blackMaterial(board.get_blackMaterial()+(2*bKnight1->getMaterial()));
+    board.set_whiteMaterial(board.get_whiteMaterial()+(2*wKnight1->getMaterial()));
+
     // 4. Place Bishops
-    chessPiece* bBishop1 = new bishop(BLACK); chessPiece* bBishop2 = new bishop(BLACK);
-    chessPiece* wBishop1 = new bishop(WHITE); chessPiece* wBishop2 = new bishop(WHITE);
+    chessPiece* bBishop1 = new bishop(BLACK, 3); chessPiece* bBishop2 = new bishop(BLACK, 3);
+    chessPiece* wBishop1 = new bishop(WHITE, 3); chessPiece* wBishop2 = new bishop(WHITE, 3);
     board.place(bBishop1, 2, 0); board.place(bBishop2, 5, 0);
     board.place(wBishop1, 2, 7); board.place(wBishop2, 5, 7);
+    board.set_blackMaterial(board.get_blackMaterial()+(2*bBishop1->getMaterial()));
+    board.set_whiteMaterial(board.get_whiteMaterial()+(2*wBishop1->getMaterial()));
 
     // 5. Place Queens (File x=3)
-    chessPiece* bQueen = new queen(BLACK);
-    chessPiece* wQueen = new queen(WHITE);
+    chessPiece* bQueen = new queen(BLACK, 9);
+    chessPiece* wQueen = new queen(WHITE, 9);
     board.place(bQueen, 3, 0);
     board.place(wQueen, 3, 7);
+    board.set_blackMaterial(board.get_blackMaterial()+bQueen->getMaterial());
+    board.set_whiteMaterial(board.get_whiteMaterial()+wQueen->getMaterial());
 
     // 6. Place Kings (File x=4)
-    chessPiece* bKing = new king(BLACK);
-    chessPiece* wKing = new king(WHITE);
+    chessPiece* bKing = new king(BLACK, 0);
+    chessPiece* wKing = new king(WHITE, 0);
     board.place(bKing, 4, 0);
     board.place(wKing, 4, 7);
 
@@ -882,14 +943,32 @@ void game::game_run() {
                         chessPiece* destinationTarget = board.at(clickedGrid.x, clickedGrid.y);
                         chessPiece* movingPiece = board.at(selectedPieceCoord.x, selectedPieceCoord.y);
 
+                        // 1. Detect Double-Step (Check this BEFORE we move the piece!)
+                        bool isDoubleStep = false;
+                        if (dynamic_cast<pawn*>(movingPiece) != nullptr) {
+                            if (std::abs(clickedGrid.y - selectedPieceCoord.y) == 2) {
+                                isDoubleStep = true;
+                            }
+                        }
+
                         if (destinationTarget != nullptr || typeid(*movingPiece) == typeid(pawn)) {
-                            this->moves_Since_Last_Capture = 0; 
+                            this->moves_Since_Last_Capture = 0;
                         } else {
                             this->moves_Since_Last_Capture++;
                         }
 
+                        // 2. Apply the move (Executes the matrix updates and handles EP deletions natively)
                         board.applyMovement(finalizedMove);
                         moves.push_back(finalizedMove);
+
+                        // 3. Clear the previous turn's target (It expires exactly right now)
+                        board.clearEnPassantTarget();
+
+                        // 4. Set the new target if a double-step just occurred
+                        if (isDoubleStep) {
+                            int midY = selectedPieceCoord.y + ((clickedGrid.y - selectedPieceCoord.y) / 2);
+                            board.setEnPassantTarget(Position(clickedGrid.x, midY));
+                        }
 
                         activeHighlights.clear();
                         selectedPieceCoord = sf::Vector2i(-1, -1);
@@ -943,5 +1022,7 @@ void game::game_run() {
     }
 }
 
-void game::game_replay() {}
+void game::game_replay() {
+
+}
 
