@@ -264,3 +264,33 @@ void Renderer::replay_renderBoard(sf::RenderWindow& window, const ChessBoard& bo
     // Material Display
     drawMaterialDisplay(window, board);
 }
+
+void Renderer::drawPromotionMenu(sf::RenderWindow& window, pieceColor color) {
+    // Semi-transparent dark overlay
+    sf::RectangleShape overlay(sf::Vector2f(1000.f, 1000.f));
+    overlay.setFillColor(sf::Color(0, 0, 0, 150));
+    window.draw(overlay);
+
+    // Menu background
+    sf::RectangleShape bg(sf::Vector2f(400.f, 100.f));
+    bg.setOrigin(200.f, 50.f);
+    bg.setPosition(500.f, 500.f);
+    bg.setFillColor(sf::Color(220, 220, 220));
+    bg.setOutlineThickness(5.f);
+    bg.setOutlineColor(sf::Color(50, 50, 50));
+    window.draw(bg);
+
+    int cIdx = (color == WHITE) ? 0 : 1;
+    
+    queenSprite[cIdx].setPosition(350.f, 500.f);
+    window.draw(queenSprite[cIdx]);
+
+    rookSprite[cIdx].setPosition(450.f, 500.f);
+    window.draw(rookSprite[cIdx]);
+
+    bishopSprite[cIdx].setPosition(550.f, 500.f);
+    window.draw(bishopSprite[cIdx]);
+
+    knightSprite[cIdx].setPosition(650.f, 500.f);
+    window.draw(knightSprite[cIdx]);
+}

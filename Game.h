@@ -17,6 +17,8 @@ private:
     pieceColor currentTurn;
     int moves_Since_Last_Capture;
     Renderer renderer;
+    bool isPromoting;
+    sf::Vector2i promotionCoord;
 public:
     game();
     ~game();

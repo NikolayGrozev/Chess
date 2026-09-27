@@ -33,6 +33,7 @@ public:
     int get_blackMaterial() const;
     void set_whiteMaterial(int m);
     void set_blackMaterial(int m);
+    void promote(int x, int y, chessPiece* newPiece);
 };
 
 #endif // CHESSBOARD_H

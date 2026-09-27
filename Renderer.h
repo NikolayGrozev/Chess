@@ -41,6 +41,7 @@ public:
     void replay_renderBoard(sf::RenderWindow& window, const ChessBoard& board, pieceColor viewColor);
     void drawExitButton(sf::RenderWindow& window);
     void drawMaterialDisplay(sf::RenderWindow& window, const ChessBoard& board);
+    void drawPromotionMenu(sf::RenderWindow& window, pieceColor color);
 };
 
 #endif // RENDERER_H

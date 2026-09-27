@@ -8,7 +8,9 @@ game::game() :
     isOver(false),
     moves_Since_Last_Capture(0),
     currentTurn(WHITE),
-    board()
+    board(),
+    isPromoting(false),
+    promotionCoord(-1, -1)
 {}
 
 game::~game() {}
@@ -85,6 +87,8 @@ void game::game_run(sf::RenderWindow& window) {
     this->isOver = false;
     this->currentTurn = WHITE;
     this->moves_Since_Last_Capture = 0;
+    this->isPromoting = false;
+    this->promotionCoord = sf::Vector2i(-1, -1);
 
     // =========================================================================
     // STANDARD CHESS BOARD PIECE PLACEMENT INITIALIZATION
@@ -159,6 +163,31 @@ sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
                         continue; // Ignore piece clicks if game is over
                     }
 
+                    if (this->isPromoting) {
+                        // Check promotion menu clicks
+                        if (mappedMouse.y >= 450.f && mappedMouse.y <= 550.f) {
+                            chessPiece* newPiece = nullptr;
+                            if (mappedMouse.x >= 312.5f && mappedMouse.x <= 387.5f) {
+                                newPiece = new queen(this->currentTurn, 9);
+                            } else if (mappedMouse.x >= 412.5f && mappedMouse.x <= 487.5f) {
+                                newPiece = new rook(this->currentTurn, 5);
+                            } else if (mappedMouse.x >= 512.5f && mappedMouse.x <= 587.5f) {
+                                newPiece = new bishop(this->currentTurn, 3);
+                            } else if (mappedMouse.x >= 612.5f && mappedMouse.x <= 687.5f) {
+                                newPiece = new knight(this->currentTurn, 3);
+                            }
+
+                            if (newPiece != nullptr) {
+                                board.promote(promotionCoord.x, promotionCoord.y, newPiece);
+                                this->isPromoting = false;
+                                this->currentTurn = (this->currentTurn == WHITE) ? BLACK : WHITE;
+                                std::cout << "Turn Swapped After Promotion. Current Player: " 
+                                          << ((currentTurn == WHITE) ? "White" : "Black") << std::endl;
+                            }
+                        }
+                        continue; // Skip normal clicking while promoting
+                    }
+
                     // =========================================================
                     // SURRENDER BUTTON CLICK DETECTION
                     // (Center is 950,200. Size 75x75)
@@ -210,6 +239,11 @@ sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
                         board.applyMovement(finalizedMove);
                         moves.push_back(finalizedMove);
 
+                        bool needsPromotion = false;
+                        if (dynamic_cast<pawn*>(movingPiece) != nullptr && (clickedGrid.y == 0 || clickedGrid.y == 7)) {
+                            needsPromotion = true;
+                        }
+
                         // 3. Clear the previous turn's target (It expires exactly right now)
                         board.clearEnPassantTarget();
 
@@ -222,9 +256,14 @@ sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
                         activeHighlights.clear();
                         selectedPieceCoord = sf::Vector2i(-1, -1);
 
-                        this->currentTurn = (this->currentTurn == WHITE) ? BLACK : WHITE;
-                        std::cout << "Turn Swapped. Current Player: " 
-                                  << ((currentTurn == WHITE) ? "White" : "Black") << std::endl;
+                        if (needsPromotion) {
+                            this->isPromoting = true;
+                            this->promotionCoord = clickedGrid;
+                        } else {
+                            this->currentTurn = (this->currentTurn == WHITE) ? BLACK : WHITE;
+                            std::cout << "Turn Swapped. Current Player: " 
+                                      << ((currentTurn == WHITE) ? "White" : "Black") << std::endl;
+                        }
 
                         if (this->moves_Since_Last_Capture >= 100) { 
                             std::cout << "Match Terminated: 50-Move Rule Triggered (Draw)!" << std::endl;
@@ -270,6 +309,10 @@ sf::Vector2i rawMouse(event.mouseButton.x, event.mouseButton.y);
         
         if (this->isOver) {
             renderer.drawExitButton(window);
+        }
+
+        if (this->isPromoting) {
+            renderer.drawPromotionMenu(window, this->currentTurn);
         }
 
         window.display();

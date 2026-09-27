@@ -364,3 +364,15 @@ void ChessBoard:: set_whiteMaterial(int m){
 void ChessBoard:: set_blackMaterial(int m){
     this->blackMaterial = m;
 };
+
+void ChessBoard::promote(int x, int y, chessPiece* newPiece) {
+    chessPiece* oldPiece = this->board[y][x];
+    if (oldPiece != nullptr) {
+        if (oldPiece->get_PieceColor() == WHITE) this->whiteMaterial -= oldPiece->getMaterial();
+        else this->blackMaterial -= oldPiece->getMaterial();
+        delete oldPiece;
+    }
+    this->board[y][x] = newPiece;
+    if (newPiece->get_PieceColor() == WHITE) this->whiteMaterial += newPiece->getMaterial();
+    else this->blackMaterial += newPiece->getMaterial();
+}
